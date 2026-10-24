@@ -288,7 +288,5 @@ public sealed partial class SettingsPage : Page
         await Task.CompletedTask;
     }
 
-    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
-        => await Dialogs.ShowNotImplementedAsync("检查更新", XamlRoot);
 
 }

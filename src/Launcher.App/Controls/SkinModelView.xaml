@@ -29,7 +29,7 @@
                 </Viewbox>
             </Button>
         </Grid>
-        <Grid Grid.Row="1" x:Name="ViewerHost" Margin="8,0,8,8">
+        <Grid Grid.Row="1" x:Name="ViewerHost" Margin="8,8,8,8">
             <StackPanel x:Name="Fallback" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
                 <Image x:Name="FallbackHead" Source="ms-appx:///Assets/Skins/steve_head.png" Width="64" Height="64" />
                 <TextBlock x:Name="FallbackText" Text="正在准备皮肤模型" FontSize="12"

@@ -157,4 +157,18 @@ public sealed partial class WelcomePairingView : UserControl
         fade.Duration = TimeSpan.FromMilliseconds(350);
         visual.StartAnimation("Opacity", fade);
     }
+    private async void CheckLauncherUpdate_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = "软件更新", CloseButtonText = "关闭", XamlRoot = XamlRoot,
+            Content = new Microsoft.UI.Xaml.Controls.ScrollViewer
+            {
+                Content = new ApplicationUpdatePanel(), MaxHeight = 420, Width = 470,
+                HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Disabled,
+            },
+        };
+        await dialog.ShowAsync();
+    }
+
 }

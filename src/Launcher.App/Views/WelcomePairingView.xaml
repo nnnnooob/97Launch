@@ -86,7 +86,10 @@
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
-                <TextBlock x:Name="VersionText" Grid.Row="2" FontSize="11" Foreground="{ThemeResource WelcomeMuted}" />
+                <Grid Grid.Row="2">
+                    <TextBlock x:Name="VersionText" FontSize="11" VerticalAlignment="Center" Foreground="{ThemeResource WelcomeMuted}" />
+                    <HyperlinkButton Content="检查更新" FontSize="11" HorizontalAlignment="Right" Padding="0,4" Click="CheckLauncherUpdate_Click" />
+                </Grid>
             </Grid>
         </Grid>
     </Grid>

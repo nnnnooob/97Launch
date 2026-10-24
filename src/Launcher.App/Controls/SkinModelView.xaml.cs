@@ -135,6 +135,7 @@ public sealed partial class SkinModelView : UserControl
                 active = _pageActive && _windowActive && IsLoaded,
                 animate = _settings.AnimationsEnabled && !_accessibility.HighContrast,
                 dark = ActualTheme == ElementTheme.Dark,
+                highContrast = _accessibility.HighContrast,
             });
             await core.ExecuteScriptAsync($"window.setActivity({state})");
         }

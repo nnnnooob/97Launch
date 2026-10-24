@@ -14,6 +14,10 @@ public static class AppInfo
     /// <summary>Product name used in window titles and log headers.</summary>
     public const string Name = "97Launch";
 
+    /// <summary>The distributable EXE's directory, independent of single-file extraction.</summary>
+    public static string ApplicationDirectory { get; } =
+        Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+
     /// <summary>
     /// Per-user data root: <c>%LOCALAPPDATA%\97Launch</c>.
     /// </summary>
@@ -43,6 +47,9 @@ public static class AppInfo
     /// UI, logs and any crash report agree.
     /// </remarks>
     public static string Version { get; } = BuildVersion();
+    public static int BuildNumber { get; } = int.TryParse(typeof(AppInfo).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "BuildNumber")?.Value,
+        out var number) ? number : 0;
 
     /// <summary>Ensures the directories Serilog writes into exist.</summary>
     public static void EnsureDirectories()

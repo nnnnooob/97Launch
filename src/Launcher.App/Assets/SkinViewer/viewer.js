@@ -24,6 +24,7 @@ window.setActivity = function (state) {
   active = state.active;
   animate = state.animate;
   document.documentElement.classList.toggle('dark', state.dark);
+  document.documentElement.classList.toggle('high-contrast', state.highContrast);
   renderState();
 };
 window.setSkin = async function (skin) {

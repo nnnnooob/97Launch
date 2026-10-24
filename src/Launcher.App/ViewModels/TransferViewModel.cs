@@ -172,19 +172,19 @@ public sealed partial class TransferViewModel : ObservableObject
 
     public TransferJob EnqueueOperation(string title, string instanceName, string root,
         string[] stages, Func<IProgress<InstallProgress>, CancellationToken, Task> action, bool refreshInstances = false,
-        string? sourceInstanceId = null, bool returnToLaunchOnCompletion = false, string? outputFilePath = null)
+        string? sourceInstanceId = null, bool returnToLaunchOnCompletion = false, string? outputFilePath = null, bool applicationUpdate = false)
     {
-        App.Services.GetRequiredService<LauncherAuthorizationService>().RequireAuthorization();
+        if (!applicationUpdate) App.Services.GetRequiredService<LauncherAuthorizationService>().RequireAuthorization();
         if (sourceInstanceId is not null && HasPendingModification(sourceInstanceId))
             throw new InvalidOperationException("此实例已有修改任务，请在传输页面查看进度。");
-        var job = new TransferJob(title, "实例：" + instanceName, root, instanceName, action)
+        var job = new TransferJob(title, (applicationUpdate ? "应用：" : "实例：") + instanceName, root, instanceName, action)
         {
             IsMaintenance = true, RefreshInstancesOnCompletion = refreshInstances,
             SourceInstanceId = sourceInstanceId, ReturnToLaunchOnCompletion = returnToLaunchOnCompletion,
-            OutputFilePath = outputFilePath,
+            OutputFilePath = outputFilePath, IsApplicationUpdate = applicationUpdate,
         };
         job.Steps.Clear();
-        foreach (var stage in stages) job.Steps.Add(new(stage, 1, TransferStepState.Waiting, "等待中"));
+        for (var i = 0; i < stages.Length; i++) job.Steps.Add(new(stages[i], applicationUpdate && i == 0 ? 9 : 1, TransferStepState.Waiting, "等待中"));
         Jobs.Add(job);
         RefreshSummary();
         if (!_isProcessing) _ = ProcessQueueAsync();
@@ -210,7 +210,7 @@ public sealed partial class TransferViewModel : ObservableObject
 
     public void RetryJob(TransferJob job)
     {
-        App.Services.GetRequiredService<LauncherAuthorizationService>().RequireAuthorization();
+        if (!job.IsApplicationUpdate) App.Services.GetRequiredService<LauncherAuthorizationService>().RequireAuthorization();
         if (job.State != TransferJobState.Failed) return;
         Serilog.Log.Information("请求重试传输任务：{Title}，实例：{Instance}", job.Title, job.InstanceName);
         if (job.SourceInstanceId is not null && HasPendingModification(job.SourceInstanceId))
@@ -291,8 +291,9 @@ public sealed partial class TransferViewModel : ObservableObject
                         }
                     }
                     job.SetState(TransferJobState.Completed,
-                        job.IsMaintenance ? "操作完成" : job.FileDownloads is null ? "安装完成" : "下载完成");
-                    if (job.IsMaintenance) _toasts.Show("操作完成", job.Title);
+                        job.IsApplicationUpdate ? "更新已下载，等待重启" : job.IsMaintenance ? "操作完成" : job.FileDownloads is null ? "安装完成" : "下载完成");
+                    if (job.IsApplicationUpdate) _toasts.Show("更新已就绪", "点击重启并更新，完成版本升级。");
+                    else if (job.IsMaintenance) _toasts.Show("操作完成", job.Title);
                 }
                 catch (OperationCanceledException ex) when (token.IsCancellationRequested || ex is UserCanceledOperationException)
                 {
@@ -475,6 +476,8 @@ public sealed partial class TransferJob : ObservableObject
     public Func<IProgress<InstallProgress>, CancellationToken, Task>? ResourceInstall { get; }
     public bool IsResourceJob => FileDownloads is not null || ResourceInstall is not null;
     public bool IsMaintenance { get; init; }
+    public bool IsApplicationUpdate { get; init; }
+    public Visibility ApplyUpdateVisibility => IsApplicationUpdate && State == TransferJobState.Completed ? Visibility.Visible : Visibility.Collapsed;
     public bool RefreshInstancesOnCompletion { get; init; }
     public string? SourceInstanceId { get; init; }
     public bool ReturnToLaunchOnCompletion { get; init; }
@@ -497,6 +500,7 @@ public sealed partial class TransferJob : ObservableObject
     [NotifyPropertyChangedFor(nameof(ActionIcon))]
     [NotifyPropertyChangedFor(nameof(HasFailed))]
     [NotifyPropertyChangedFor(nameof(OutputFileVisibility))]
+    [NotifyPropertyChangedFor(nameof(ApplyUpdateVisibility))]
     private TransferJobState _state = TransferJobState.Queued;
 
     [ObservableProperty]

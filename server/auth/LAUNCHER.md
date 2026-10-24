@@ -19,6 +19,7 @@
 源码不包含实际部署地址。配置文件格式见仓库根目录 `authorization-server.example.json`。
 
 - 开发/发布：在仓库根目录创建 Git 忽略的 `authorization-server.json`，构建和发布会将其复制到程序目录。
+- EXE 同目录配置优先于随包解压的默认配置。直接复制单个 EXE 到另一目录时，仍可读取其内置的服务配置。
 - 本机覆盖：`%LOCALAPPDATA%\97Launch\authorization-server.json` 优先于程序目录配置。
 - 未提供配置时，欢迎页提示授权服务配置无效，不会连接占位地址。
 

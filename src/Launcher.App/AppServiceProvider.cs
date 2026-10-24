@@ -59,6 +59,7 @@ public static class AppServiceProvider
         services.AddSingleton(LogBuffer.Shared);
         services.AddSingleton<ToastService>();
         services.AddSingleton<LauncherAuthorizationService>();
+        services.AddSingleton<AppUpdateService>();
         services.AddSingleton<ServerCatalogService>();
         services.AddSingleton<PendingResourceBrowse>();
 

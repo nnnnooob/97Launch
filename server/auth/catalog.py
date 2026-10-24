@@ -432,6 +432,8 @@ class Catalog:
             await asyncio.sleep(30)
 
     async def cleanup(self):
+        if hasattr(self, "extra_cleanup"):
+            self.extra_cleanup()
         now = int(time.time())
         with self.db() as c:
             c.execute("DELETE FROM download_leases WHERE expires_at<?", (now,))
@@ -449,6 +451,9 @@ class Catalog:
         with self.db() as c:
             used = c.execute("SELECT COALESCE(SUM(size),0) FROM pack_versions").fetchone()[0]
             reserved = c.execute("SELECT COALESCE(SUM(size),0) FROM pack_uploads WHERE status IN ('uploading','failed')").fetchone()[0]
+            if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='launcher_releases'").fetchone():
+                used += c.execute("SELECT COALESCE(SUM(size),0) FROM launcher_releases WHERE state IN ('ready','published','withdrawn')").fetchone()[0]
+                reserved += c.execute("SELECT COALESCE(SUM(size),0) FROM launcher_releases WHERE state IN ('uploading','failed')").fetchone()[0]
         return {"stored_bytes": used, "reserved_bytes": reserved,
                 "free_disk_bytes": shutil.disk_usage(self.storage).free,
                 "quota_bytes": self.traffic["storage_gib"] * GIB}
@@ -527,8 +532,8 @@ class Catalog:
         result["chunk_size"] = CHUNK
         return result
 
-    async def download(self, request, version, owner, admin=False):
-        path = self.storage / "blobs" / (version["id"] + ".pack")
+    async def download(self, request, version, owner, admin=False, *, path=None, available=None):
+        path = path or self.storage / "blobs" / (version["id"] + ".pack")
         if not path.is_file() or path.stat().st_size != version["size"]:
             self.fail(503, "pack_unavailable", "整合包文件暂不可用，请联系管理员")
         etag = '"' + version["sha256"] + '"'
@@ -570,11 +575,16 @@ class Catalog:
                 self.download_users[owner] -= 1
 
         async def stream():
+            checked_at = 0.0
             try:
                 with path.open("rb") as f:
                     f.seek(start)
                     remaining = end - start + 1
                     while remaining:
+                        if available is not None and time.monotonic() - checked_at >= 1:
+                            if not available():
+                                raise IOError("应用版本已撤回")
+                            checked_at = time.monotonic()
                         block = f.read(min(BLOCK, remaining))
                         if not block:
                             break

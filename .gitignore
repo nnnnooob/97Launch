@@ -102,3 +102,8 @@ _*.txt
 authorization-server.json
 deployment.env
 server-access.json
+
+## Portable build delivered beside .minecraft
+/97Launch.exe
+
+!/server/auth/update-signing-public.pem

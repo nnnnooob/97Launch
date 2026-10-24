@@ -1,6 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const labels = {
+  releases: ['应用更新', '版本', '管理启动器版本、更新说明和签名发布文件。'],
   servers: ['服务器', '服务器', '从 MCSManager 同步运行状态，管理玩家可见的服务器与关联整合包。'],
   packs: ['整合包', '文件', '集中管理客户端整合包与版本，上传后即可关联服务器。'],
   traffic: ['带宽与连接', '连接', '设置文件传输上限，为 Minecraft 服务器保留带宽。'],
@@ -9,7 +10,7 @@ const labels = {
   audit: ['操作记录', '记录', '配对、权限修改与授权撤销，都记录在这里。'],
   settings: ['接入设置', '设置', '配置群配对权限，将 NoneBot 与启动器连接起来。']
 };
-const events = {code_issued:'申请配对 Token', admin_code_issued:'管理员签发 Token', device_paired:'设备完成配对', admin_login:'进入管理页',
+const events = {release_upload_started:'开始上传应用', release_verified:'应用文件校验通过', release_published:'发布应用版本', release_withdrawn:'撤回应用版本', release_upload_cancelled:'取消应用上传', code_issued:'申请配对 Token', admin_code_issued:'管理员签发 Token', device_paired:'设备完成配对', admin_login:'进入管理页',
   policy_updated:'更新配对权限', device_revoked:'撤销设备授权', code_revoked:'作废配对 Token',
   code_delivery_failed:'私聊发送失败，作废 Token', device_logged_out:'设备主动退出'};
 Object.assign(events, {traffic_updated:'更新传输限速', mcsm_updated:'更新 MCSM 连接', server_updated:'更新服务器',
@@ -40,6 +41,7 @@ function loginView() {
   $('app').hidden = true; $('login').hidden = false;
   clearInterval(refreshTimer); refreshTimer = null;
   window.CatalogUI?.logout();
+  window.UpdateUI?.logout();
 }
 
 async function api(path, options = {}) {
@@ -85,6 +87,7 @@ function pagination(name, data) {
 }
 
 async function loadList() {
+  if (view === 'releases') return window.UpdateUI.load();
   if (['servers','packs','traffic'].includes(view)) return window.CatalogUI.load(view);
   if (view === 'settings') return;
   const name = view;
@@ -135,7 +138,7 @@ async function switchView(name) {
   if (name === view) return;
   view = name;
   history.replaceState(null, '', '#' + name);
-  document.querySelector('.metrics').hidden = ['servers','packs','traffic'].includes(name);
+  document.querySelector('.metrics').hidden = ['servers','packs','traffic','releases'].includes(name);
   document.querySelectorAll('.view').forEach(el => { el.hidden = el.id !== name; el.classList.remove('switching'); });
   $(name).classList.add('switching');
   document.querySelectorAll('.nav').forEach(el => { el.classList.toggle('active', el.dataset.view === name); el.setAttribute('aria-current', el.dataset.view === name ? 'page' : 'false'); });

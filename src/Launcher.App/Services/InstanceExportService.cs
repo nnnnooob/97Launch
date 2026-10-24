@@ -48,7 +48,7 @@ public sealed class InstanceExportService(InstanceContentService content, Instan
         if (options.IncludeLauncher && Path.GetExtension(destination).Equals(".mrpack", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("携带启动器时请选择 ZIP 格式。");
         if (destination.StartsWith(context.GameDirectory.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)
-            || destination.StartsWith(AppContext.BaseDirectory.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))
+            || destination.StartsWith(AppInfo.ApplicationDirectory.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))
             throw new IOException("请把导出文件保存在游戏目录和启动器程序目录以外。");
         var manifest = await modification.ReadInstalledAsync(context, token);
         progress.Report(new(0, 0, "整理导出内容"));
@@ -131,13 +131,8 @@ public sealed class InstanceExportService(InstanceContentService content, Instan
                 {
                     using var outer = ZipFile.Open(temp, ZipArchiveMode.Create);
                     await AddFile(outer, packTemp, options.Name + ".mrpack", token);
-                    foreach (var file in InstanceContentService.Files(AppContext.BaseDirectory))
-                    {
-                        var relative = Path.GetRelativePath(AppContext.BaseDirectory, file).Replace('\\', '/');
-                        if (relative.StartsWith("logs/") || relative.StartsWith(".minecraft/") || relative.StartsWith("97Launch/") || relative.StartsWith("java/") || relative.Contains("accounts", StringComparison.OrdinalIgnoreCase)
-                            || relative.EndsWith(".pdb") || relative.EndsWith(".dat") || relative == "settings.json") continue;
-                        await AddFile(outer, file, "97Launch/" + relative, token);
-                    }
+                    var launcher = Environment.ProcessPath ?? throw new IOException("无法定位启动器程序。");
+                    await AddFile(outer, launcher, "97Launch/97Launch.exe", token);
                 }
             }, token);
             token.ThrowIfCancellationRequested();

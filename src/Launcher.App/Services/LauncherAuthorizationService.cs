@@ -49,6 +49,8 @@ public sealed class LauncherAuthorizationService
         {
             var configPath = Path.Combine(AppInfo.DataDirectory, "authorization-server.json");
             if (!File.Exists(configPath))
+                configPath = Path.Combine(AppInfo.ApplicationDirectory, "authorization-server.json");
+            if (!File.Exists(configPath))
                 configPath = Path.Combine(AppContext.BaseDirectory, "authorization-server.json");
             using var config = JsonDocument.Parse(File.ReadAllText(configPath));
             var address = config.RootElement.GetProperty("base_url").GetString();
@@ -222,6 +224,7 @@ public sealed class LauncherAuthorizationService
 
     public void RequireAuthorization()
     {
+        if (AppUpdateService.RestartPending) throw new InvalidOperationException("正在准备重启更新，请稍候再操作。");
         if (Status == LauncherAuthorizationStatus.Offline && LastVerifiedAt is { } verified &&
             (DateTimeOffset.UtcNow < verified || DateTimeOffset.UtcNow - verified > TimeSpan.FromHours(72)))
             SetStatus(LauncherAuthorizationStatus.NetworkRequired, "本机离线授权已到期，请联网验证后继续。");
@@ -340,6 +343,20 @@ public sealed class LauncherAuthorizationService
         File.WriteAllText(path + ".tmp", id);
         File.Move(path + ".tmp", path, overwrite: true);
         return id;
+    }
+
+    internal async Task<HttpResponseMessage> SendUpdateRequestAsync(string path, CancellationToken token,
+        long? offset = null, string? etag = null)
+    {
+        if (_server is null || !Uri.TryCreate(_server, path, out var uri) ||
+            uri.Scheme != _server.Scheme || uri.Host != _server.Host || uri.Port != _server.Port ||
+            !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment) ||
+            !uri.AbsolutePath.StartsWith("/api/v1/updates/", StringComparison.Ordinal))
+            throw new InvalidOperationException("更新服务地址无效。");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        if (IsAuthorized && _saved is not null) request.Headers.Authorization = new("Bearer", _saved.DeviceToken);
+        if (offset > 0) { request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(offset, null); request.Headers.TryAddWithoutValidation("If-Range", etag); }
+        return await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
     }
 
     private HttpClient CreateHttpClient()

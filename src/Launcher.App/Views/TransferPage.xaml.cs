@@ -138,4 +138,10 @@ public sealed partial class TransferPage : Page
             ViewModel.RetryJob(job);
         }
     }
+    private async void ApplyUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        try { await App.Services.GetRequiredService<AppUpdateService>().ApplyAsync(); }
+        catch (Exception ex) { App.Services.GetRequiredService<ToastService>().ShowError("暂时无法更新", ex.Message); }
+    }
+
 }

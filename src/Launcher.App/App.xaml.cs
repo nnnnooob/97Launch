@@ -14,8 +14,8 @@ namespace Launcher.App;
 /// Application entry point.
 /// </summary>
 /// <remarks>
-/// The generated <c>Main</c> (supplied by the XAML toolchain) runs
-/// <c>Application.Start</c> and constructs this class. Logging is therefore
+/// <c>Program.Main</c> handles update commands before starting XAML and
+/// constructing this class. Logging is therefore
 /// configured in the constructor before anything else touches the container,
 /// so failures during startup are captured rather than lost.
 /// </remarks>
@@ -37,6 +37,8 @@ public partial class App : Application
 
         Log.Information("97Launch {Version} 正在启动", AppInfo.Version);
         Log.Information("日志目录：{Path}", AppInfo.LogDirectory);
+        Log.Information("程序目录：{Path}", AppInfo.ApplicationDirectory);
+        Log.Information("资源目录：{Path}", AppContext.BaseDirectory);
 
         InitializeComponent();
 
@@ -56,7 +58,23 @@ public partial class App : Application
         authorization.Changed += AuthorizationChanged;
         _authorizationTimer.Tick += async (_, _) => await authorization.CheckAsync();
         ShowAuthorizationWindow();
-        _ = authorization.InitializeAsync();
+        _ = InitializeApplicationAsync(authorization);
+        _dispatcher.TryEnqueue(DispatcherQueuePriority.Low, UpdateBootstrap.AcknowledgeStartup);
+    }
+
+    private async Task InitializeApplicationAsync(LauncherAuthorizationService authorization)
+    {
+        await authorization.InitializeAsync();
+        try { await Services.GetRequiredService<AppUpdateService>().InitializeAsync(); }
+        catch (Exception ex) { Log.Warning("初始化更新服务失败：{ErrorType}", ex.GetType().Name); }
+    }
+
+    internal static void RequestExitForUpdate()
+    {
+        if (Current is not App app) return;
+        if (app._shellWindow is not null) app._shellWindow.Close();
+        else if (app._authorizationWindow is not null) app._authorizationWindow.Close();
+        else app.Exit();
     }
 
     private void AuthorizationChanged(object? sender, EventArgs e)

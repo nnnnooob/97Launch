@@ -10,52 +10,28 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
 
     <UseWinUI>true</UseWinUI>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
 
-    <!--
-      Unpackaged + self-contained.
-
-      WindowsPackageType=None declares that this app has no MSIX package
-      identity. Without it the SDK assumes package identity, wires up
-      DeploymentManager, and the process dies on startup with
-      REGDB_E_CLASSNOTREG while activating DeploymentInitializeOptions, because
-      there is no package to find.
-
-      WindowsAppSDKSelfContained=true copies the Windows App SDK runtime next to
-      the exe, so the app does not depend on which runtime version a given
-      machine happens to have installed.
-    -->
+    <!-- Portable single-file distribution; dependencies are extracted by the .NET host. -->
     <WindowsPackageType>None</WindowsPackageType>
-
-    <!--
-      MSIX tooling stays off: there is no package to produce, and enabling it
-      drags in the Appx packaging targets, which need the "MSIX Packaging Tools"
-      Visual Studio component that is not installed here.
-    -->
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <AssemblyName>Launcher.App</AssemblyName>
+    <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <DebugType>embedded</DebugType>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\portable\$(RuntimeIdentifier)\</PublishDir>
 
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
 
-    <!--
-      MRT Core and PRI generation are switched off.
-
-      Both pull in MrtCore.PriGen.targets, whose tasks (ExpandPriContent,
-      RemovePayloadDuplicates) live in Microsoft.Build.Packaging.Pri.Tasks.dll
-      and Microsoft.Build.AppxPackage.dll under
-      $(MSBuildExtensionsPath)\Microsoft\VisualStudio\v17.0\AppxPackage\. That
-      folder only exists with the "MSIX Packaging Tools" Visual Studio
-      component, which is absent here, so the tasks fail to load and the build
-      stops.
-
-      Neither is needed for an unpackaged build: XAML ships as compiled .xbf
-      beside the exe, resource indexing belongs to MSIX, and the UI is
-      single-language so there is nothing for MRT to look up.
-    -->
+    <!-- Use the SDK's MSIX PRI tooling; legacy MRT targets require Visual Studio-only tasks. -->
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
-    <MakePriExeFullPath></MakePriExeFullPath>
 
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -95,6 +71,7 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Manifest Include="$(ApplicationManifest)" />
+    <EmbeddedResource Include="..\..\server\auth\update-signing-public.pem" LogicalName="Launcher.UpdateSigningRoot.pem" />
     <EmbeddedResource Include="..\..\server\auth\97launch-auth-ca.pem" LogicalName="Launcher.AuthorizationRoot.pem" />
   </ItemGroup>
 
@@ -138,5 +115,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <Target Name="CopyPortableExecutableToRoot" AfterTargets="Publish" Condition="'$(PublishSingleFile)' == 'true'">
+    <Copy SourceFiles="$(PublishDir)$(AssemblyName).exe" DestinationFiles="$(MSBuildProjectDirectory)\..\..\97Launch.exe" />
+  </Target>
 
 </Project>

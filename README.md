@@ -21,15 +21,17 @@
 
 使用 Windows、.NET 8 SDK，以及支持 WinUI 3 的 Visual Studio 构建工具。
 
+先按 `authorization-server.example.json` 在仓库根目录创建本地 `authorization-server.json`，填写实际服务地址。该文件由 Git 忽略，发布时会随单文件打包。
+
 ```powershell
-dotnet restore src/Launcher.App/Launcher.App.csproj -p:Platform=x64
-dotnet build src/Launcher.App/Launcher.App.csproj -p:Platform=x64
+./build.ps1 -Restart
 ```
 
-项目采用非 MSIX 部署方式。运行构建目录中的 `Launcher.App.exe`。
-构建前按 `authorization-server.example.json` 在仓库根目录创建本地 `authorization-server.json`，填写实际服务地址；该文件已被 Git 忽略，会随构建复制到程序目录。配置和证书验证说明见 [客户端接入文档](server/auth/LAUNCHER.md)。
-授权服务的部署与配置见 [server/auth/README.md](server/auth/README.md)，
-服务器目录与整合包接口见 [server/auth/CATALOG.md](server/auth/CATALOG.md)。
+统一生成根目录 `97Launch.exe`，与内置游戏目录 `.minecraft` 同级。EXE 包含 .NET、WinUI 运行库与图片/模型资源，启动时自动解压到缓存；游戏、账号与设置不写入该解压缓存。中间发布文件位于 `artifacts/portable/win-x64`。皮肤模型使用系统 WebView2，缺少时显示备用头像。
+
+也可执行 `dotnet publish src/Launcher.App/Launcher.App.csproj -c Release -r win-x64 -p:Platform=x64`，发布成功后同样将单 EXE 复制到仓库根目录。`dotnet build` 仅生成编译中间产物，不作为交付入口。
+
+授权配置见 [客户端接入文档](server/auth/LAUNCHER.md)，后端部署见 [server/auth/README.md](server/auth/README.md)，服务器与整合包接口见 [server/auth/CATALOG.md](server/auth/CATALOG.md)，版本发布见 [应用更新文档](server/auth/UPDATES.md)。
 
 ## 主要功能
 
@@ -39,6 +41,7 @@ dotnet build src/Launcher.App/Launcher.App.csproj -p:Platform=x64
 - **启动记录** — 持久化记录实例启动情况，运行日志保存在本机供排查
 - **服务器列表** — 获取关联实例并启动加入服务器
 - **皮肤预览** — 显示账号皮肤模型，支持行走动画与拖动旋转
+- **应用更新** — 支持检查更新、签名验证、断点续传与重启替换，启动失败时尝试恢复上一版
 - **原生界面** — WinUI 3 实现，跟随系统主题与 DPI
 
 ## 为什么要用微软账号登录

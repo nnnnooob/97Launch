@@ -474,7 +474,7 @@ public sealed partial class DownloadPage : Page
         var file = choice.Version.PrimaryFile ?? throw new InvalidOperationException("该版本没有可下载文件。");
         var gameRoot = target?.Folder?.Path ?? (target?.Instance is { } selected
             ? System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(selected.Path))! : _instances.FolderSelectionPath)
-            ?? AppContext.BaseDirectory;
+            ?? System.IO.Path.Combine(GameFolderService.LauncherRoot, ".minecraft");
         if (choice.SaveAs)
         {
             var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = ResourceFileName.Format(choice.Project.Name, file.Name,

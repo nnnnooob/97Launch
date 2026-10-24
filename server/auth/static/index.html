@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="/static/catalog.css">
   <script src="/static/app.js" defer></script>
   <script src="/static/catalog.js" defer></script>
+  <script src="/static/updates.js" defer></script>
+  <link rel="stylesheet" href="/static/updates.css">
 </head>
 <body>
   <section id="login" class="login-stage">
@@ -33,6 +35,7 @@
       <nav aria-label="管理导航">
         <button class="nav" data-view="servers"><svg><use href="#server-icon"/></svg>服务器</button>
         <button class="nav" data-view="packs"><svg><use href="#pack-icon"/></svg>整合包</button>
+        <button class="nav" data-view="releases"><svg><use href="#pack-icon"/></svg>应用更新</button>
         <button class="nav" data-view="traffic"><svg><use href="#traffic-icon"/></svg>带宽与连接</button>
         <span class="nav-divider"></span>
         <button class="nav active" data-view="devices"><svg><use href="#device-icon"/></svg>已授权设备</button>
@@ -97,11 +100,27 @@
         <div id="packs-empty" class="panel empty" hidden><svg><use href="#pack-icon"/></svg><h3>上传一个客户端整合包</h3><p>支持 CurseForge ZIP 和 Modrinth MRPACK。上传完成后，在服务器配置中关联具体版本。</p><button class="secondary" data-open-upload>选择文件</button></div>
         <div class="setting-note catalog-note">每次上传生成独立版本和 SHA-256。发布新版本不会覆盖旧文件；归档可恢复，不会中断已取得凭证的下载。</div>
       </section>
+      <section id="releases" class="view" hidden>
+        <div class="catalog-toolbar"><div><h2>应用版本</h2><p>上传签名发布包，校验后再向玩家发布。</p></div><button id="release-refresh" class="secondary"><svg><use href="#refresh-icon"/></svg>刷新版本</button></div>
+        <div class="release-layout">
+          <form id="release-form" class="panel settings-panel"><h2>上传新版本</h2><p id="release-build-hint">正在读取发布信息…</p>
+            <label for="release-exe">单文件程序</label><input id="release-exe" type="file" accept=".exe" required>
+            <label for="release-manifest">签名清单</label><input id="release-manifest" type="file" accept=".json" required>
+            <label for="release-notes">更新说明</label><textarea id="release-notes" rows="5" maxlength="5000" placeholder="本次更新了什么，有哪些修复？"></textarea>
+            <div class="setting-note">使用 publish-release.ps1 生成 EXE 和 manifest.json。文件通过校验后仍需手动发布。</div>
+            <button id="release-upload" class="primary" type="submit">上传并校验</button>
+            <div id="release-progress-area" hidden><progress id="release-progress" max="100" value="0"></progress><p id="release-progress-text" aria-live="polite"></p><button id="release-pause" class="quiet" type="button">暂停上传</button></div>
+            <p id="release-error" class="error-text" role="alert"></p>
+          </form>
+          <div><div class="panel release-info"><span class="badge active">签名发布</span><h2>准备好，再发布。</h2><p>测试版用于提前体验，稳定版用于正式分发。更新与整合包共享传输限速。</p><small id="release-key-hint"></small></div><div id="release-list"></div></div>
+        </div>
+        <input id="release-resume-file" type="file" accept=".exe" hidden>
+      </section>
       <section id="traffic" class="view" hidden>
         <div class="traffic-grid">
           <form id="traffic-form" class="panel settings-panel"><h2>文件传输限速</h2><p>同时约束全部下载与上传任务。1 MiB/s ≈ 8.39 Mbps。</p>
             <div class="form-grid"><label>总下载上限 <span>MiB/s</span><input id="download-total" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>每个 QQ 下载上限 <span>MiB/s</span><input id="download-user" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>总上传上限 <span>MiB/s</span><input id="upload-total" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>单上传任务上限 <span>MiB/s</span><input id="upload-task" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>最多同时下载<input id="download-slots" type="number" min="1" max="32" required></label><label>最多同时上传<input id="upload-slots" type="number" min="1" max="4" required></label><label>单文件上限 <span>GiB</span><input id="file-limit" type="number" min="1" max="32" required></label><label>文件存储配额 <span>GiB</span><input id="storage-limit" type="number" min="1" max="1000" required></label></div>
-            <div class="setting-note">上传使用小分片和反压限速，网络缓冲可能产生短时突发。请给 Minecraft 预留充足带宽；这里只限制本服务的整合包流量。</div><button class="primary" type="submit">保存限速</button><span id="traffic-dirty" class="form-dirty" hidden>有未保存的更改</span>
+            <div class="setting-note">上传使用小分片和反压限速，网络缓冲可能产生短时突发。请给 Minecraft 预留充足带宽；这里统一限制本服务的整合包与应用更新流量。</div><button class="primary" type="submit">保存限速</button><span id="traffic-dirty" class="form-dirty" hidden>有未保存的更改</span>
           </form>
           <div class="connection-stack"><form id="mcsm-form" class="panel settings-panel"><div class="section-heading"><h2>MCSManager 连接</h2><span id="mcsm-connection-badge" class="badge">—</span></div><p>只读取 Minecraft 实例与运行状态。不会通过这里启动或停止服务端。</p><label for="mcsm-url">面板地址</label><input id="mcsm-url" type="url" required placeholder="http://127.0.0.1:23333"><label for="mcsm-key">API Key</label><input id="mcsm-key" type="password" autocomplete="new-password" maxlength="256" placeholder="填写 MCSM API Key"><small id="mcsm-key-help">密钥仅保存于服务端，保存后不会回显。</small><p id="mcsm-connection-error" class="error-text" role="status" hidden></p><button class="primary" type="submit">保存并连接</button></form>
             <div class="panel settings-panel transfer-stats"><h2>当前传输</h2><div class="transfer-numbers"><div><strong id="active-downloads">0</strong><span>下载中</span></div><div><strong id="active-uploads">0</strong><span>上传中</span></div></div><div id="active-transfers"></div><p id="traffic-totals" class="muted"></p></div>

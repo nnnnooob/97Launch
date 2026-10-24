@@ -570,60 +570,8 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- ======== 软件更新 ======== -->
             <ScrollViewer Visibility="{x:Bind ViewModel.IsUpdate, Mode=OneWay}">
-                <StackPanel Spacing="14">
-                    <Border Style="{ThemeResource PlaceholderCardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="软件更新" />
-
-                            <TextBlock
-                                Margin="0,0,0,12"
-                                Style="{ThemeResource SettingHintStyle}"
-                                Text="当前版本为开发版，更新通道尚未接好。" />
-
-                            <Grid Style="{ThemeResource SettingRowStyle}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="当前版本" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Text="{x:Bind ViewModel.VersionDisplay}" />
-                            </Grid>
-
-                            <Grid Style="{ThemeResource SettingRowStyle}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="更新通道" />
-                                <ComboBox
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    SelectedIndex="1">
-                                    <ComboBoxItem Content="稳定版" />
-                                    <ComboBoxItem Content="开发版" />
-                                </ComboBox>
-                            </Grid>
-
-                            <CheckBox IsChecked="True" Content="启动时检查更新" />
-
-                            <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="8">
-                                <Button Click="CheckUpdate_Click">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Viewbox Width="14" Height="14" VerticalAlignment="Center" Stretch="Uniform">
-                                            <Path Data="{StaticResource IconUpdate}" Style="{ThemeResource LineIconStyle}" />
-                                        </Viewbox>
-                                        <TextBlock Text="检查更新" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                <views:ApplicationUpdatePanel />
             </ScrollViewer>
         </Grid>
     </Grid>

@@ -114,13 +114,14 @@ async def lifespan(_):
         c.execute("UPDATE codes SET revoked_at=? WHERE used_at IS NULL AND revoked_at IS NULL "
                   "AND expires_at>? AND substr(code_hint,1,4)<>'97p_'", (now, now))
     await catalog.start()
+    updates.start()
     try:
         yield
     finally:
         await catalog.stop()
 
 
-app = FastAPI(title="97Launch 服务 API", version="1.4.0", lifespan=lifespan,
+app = FastAPI(title="97Launch 服务 API", version="1.5.0", lifespan=lifespan,
               docs_url=None, redoc_url=None, openapi_url=None)
 
 
@@ -129,7 +130,7 @@ async def headers(request: Request, call_next):
     length = request.headers.get("content-length", "0")
     if not length.isdecimal():
         return JSONResponse({"error": {"code": "invalid_request", "message": "请求长度无效"}}, status_code=400)
-    chunk_upload = request.method == "PUT" and re.fullmatch(r"/api/admin/uploads/[0-9a-f-]{36}/chunk", request.url.path)
+    chunk_upload = request.method == "PUT" and re.fullmatch(r"/api/admin/(?:uploads|releases)/[0-9a-f-]{36}/chunk", request.url.path)
     if int(length) > (1048576 if chunk_upload else 16384):
         return JSONResponse({"error": {"code": "body_too_large", "message": "请求过大"}}, status_code=413)
     response = await call_next(request)
@@ -267,7 +268,7 @@ def issue_code(body: Issue, request: Request, *, admin: bool = False):
 def health():
     with db() as c:
         c.execute("SELECT 1")
-    return {"status": "ok", "service": "97launch-auth", "version": "1.4.0"}
+    return {"status": "ok", "service": "97launch-auth", "version": "1.5.0"}
 
 
 @app.post("/api/v1/bot/pairing-codes", tags=["bot"], dependencies=[Depends(bot_auth)])
@@ -480,4 +481,7 @@ from catalog import Catalog
 
 catalog = Catalog(db, fail, audit, digest, ROOT, DB_PATH)
 catalog.install_routes(app, admin_auth, device_auth)
+from updates import Releases
+updates = Releases(catalog, rate, device_auth)
+updates.install_routes(app, admin_auth)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")

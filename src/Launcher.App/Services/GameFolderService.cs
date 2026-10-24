@@ -55,47 +55,10 @@ public sealed class GameFolderService
     /// The directory that holds the launcher's game folders, i.e. PCL's
     /// <c>Paths.Base</c>.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// In a released build this is simply the executable's folder, so
-    /// <c>.minecraft</c> sits next to the launcher exactly as PCL does it.
-    /// </para>
-    /// <para>
-    /// A debug build uses the repository root as its launcher root. Its built-in
-    /// folder is therefore the repository-root <c>.minecraft</c>, while the
-    /// existing <c>debug\.minecraft</c> is registered separately as a removable
-    /// debug folder.
-    /// </para>
-    /// </remarks>
-    public static string LauncherRoot { get; } = ResolveLauncherRoot();
+    public static string LauncherRoot => AppInfo.ApplicationDirectory;
 
     private const string BuiltInFolderDisplayName = "内置文件夹";
     private const string BuiltInFolderDirectoryName = ".minecraft";
-
-    private static string ResolveLauncherRoot()
-    {
-        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-
-#if DEBUG
-        // Walk up out of bin\Debug\<tfm>\<rid> looking for the workspace root.
-        // The depth is not assumed: the marker file is searched for, so a custom
-        // OutputPath or an unusual target framework still resolves correctly.
-        //   win-x64 -> net8.0-... -> Debug -> bin -> Launcher.App -> src -> root
-        var probe = new DirectoryInfo(exeDir);
-        for (var i = 0; i < 8 && probe is not null; i++)
-        {
-            probe = probe.Parent;
-
-            if (probe is not null
-                && File.Exists(Path.Combine(probe.FullName, "Directory.Build.props")))
-            {
-                return probe.FullName;
-            }
-        }
-#endif
-
-        return exeDir;
-    }
 
     /// <summary>
     /// Built-in first, official launcher second, then the remaining folders in
