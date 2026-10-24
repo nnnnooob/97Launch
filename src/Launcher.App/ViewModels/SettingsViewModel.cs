@@ -330,7 +330,8 @@ public partial class SettingsViewModel : ObservableObject
             var detected = await JavaRuntimeDetector.DetectAsync(
                 _additionalJavaPaths,
                 cancellationToken,
-                _store?.Load().ManagedJavaRuntimeDirectories);
+                _store?.Load().ManagedJavaRuntimeDirectories,
+                _store?.Load().SelectedGameFolderPath);
             var selectedPath = SelectedJavaPath;
             JavaRuntimes.Clear();
             foreach (var runtime in detected)

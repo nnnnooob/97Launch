@@ -244,7 +244,7 @@ public partial class LaunchViewModel : ObservableObject
         var settings = _settings.Load();
         var runtimes = await JavaRuntimeDetector.DetectAsync(
             new[] { settings.SelectedJavaPath }.Concat(settings.AdditionalJavaPaths ?? []),
-            managedRuntimeRoots: settings.ManagedJavaRuntimeDirectories);
+            managedRuntimeRoots: settings.ManagedJavaRuntimeDirectories, gameDirectory: settings.SelectedGameFolderPath);
         if (requestId != _javaDetectionId || _instance is not null) return;
         var selected = runtimes.FirstOrDefault(item =>
             JavaRuntimeDetector.IsSameRuntime(item.Path, settings.SelectedJavaPath))

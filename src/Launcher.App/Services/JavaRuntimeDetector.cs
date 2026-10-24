@@ -21,16 +21,19 @@ public static partial class JavaRuntimeDetector
     public static async Task<IReadOnlyList<JavaRuntimeInfo>> DetectAsync(
         IEnumerable<string>? additionalPaths = null,
         CancellationToken cancellationToken = default,
-        IEnumerable<string>? managedRuntimeRoots = null)
+        IEnumerable<string>? managedRuntimeRoots = null,
+        string? gameDirectory = null)
     {
-        var candidates = CandidatePaths(additionalPaths, managedRuntimeRoots);
+        var candidates = await Task.Run(() => CandidatePaths(additionalPaths, managedRuntimeRoots, gameDirectory, cancellationToken), cancellationToken).ConfigureAwait(false);
+        Serilog.Log.Information("Java 搜索候选：{Count} 个程序路径", candidates.Count);
         using var concurrency = new SemaphoreSlim(4);
         var probes = candidates.Select(async candidate =>
         {
             await concurrency.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                return await ProbeAsync(candidate.Path, candidate.IsManual, cancellationToken).ConfigureAwait(false);
+                return await ProbeAsync(candidate.Path, candidate.IsManual, cancellationToken,
+                    (path, reason) => Serilog.Log.Warning("Java 检查失败：{Path}，{Reason}", path, reason)).ConfigureAwait(false);
             }
             finally
             {
@@ -79,7 +82,7 @@ public static partial class JavaRuntimeDetector
             var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
             var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(4));
+            timeout.CancelAfter(TimeSpan.FromSeconds(15));
             try
             {
                 await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
@@ -87,7 +90,7 @@ public static partial class JavaRuntimeDetector
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 process.Kill(true);
-                onProbeFailure?.Invoke(path, "Java version probe timed out after 4 seconds.");
+                onProbeFailure?.Invoke(path, "Java version probe timed out after 15 seconds.");
                 return null;
             }
 
@@ -153,7 +156,9 @@ public static partial class JavaRuntimeDetector
 
     private static IReadOnlyList<(string Path, bool IsManual)> CandidatePaths(
         IEnumerable<string>? additionalPaths,
-        IEnumerable<string>? managedRuntimeRoots)
+        IEnumerable<string>? managedRuntimeRoots,
+        string? gameDirectory,
+        CancellationToken token)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var candidates = new List<(string Path, bool IsManual)>();
@@ -180,46 +185,59 @@ public static partial class JavaRuntimeDetector
             if (!string.IsNullOrWhiteSpace(directory)) Add(Path.Combine(directory.Trim().Trim('"'), "java.exe"));
         }
 
-        foreach (var root in new[]
+        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var user = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var roots = new List<string>
         {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Java"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Eclipse Adoptium"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft", "jdk"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Eclipse Adoptium"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Microsoft", "jdk"),
-        })
+            Path.Combine(roaming, ".minecraft", "runtime"),
+            Path.Combine(roaming, ".hmcl", "java"),
+            Path.Combine(roaming, "ATLauncher", "runtimes", "minecraft"),
+            Path.Combine(roaming, "ModrinthApp", "meta", "java_versions"),
+            Path.Combine(roaming, "PrismLauncher", "java"),
+            Path.Combine(user, "curseforge", "minecraft", "Install", "runtime"),
+            Path.Combine(user, ".jdks"),
+            Path.Combine(user, ".sdkman", "candidates", "java"),
+            Path.Combine(local, ".ftba", "bin", "runtime"),
+            Path.Combine(local, "Packages", "Microsoft.4297127D64EC6_8wekyb3d8bbwe", "LocalCache", "Local", "runtime"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Curse", "Minecraft", "Install", "runtime"),
+            Path.Combine(AppInfo.DataDirectory, "runtimes", "java"),
+        };
+        roots.AddRange(managedRuntimeRoots ?? []);
+        foreach (var home in (Environment.GetEnvironmentVariable("JDK_HOME") + ";" + Environment.GetEnvironmentVariable("JAVA_HOME")).Split(';', StringSplitOptions.RemoveEmptyEntries))
+            roots.Add(home.Trim().Trim('"'));
+        foreach (var programRoot in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), Path.Combine(local, "Programs") }.Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            foreach (var vendor in new[] { "Java", "Eclipse Adoptium", "Amazon Corretto", "Zulu", "BellSoft", "Semeru" })
+                roots.Add(Path.Combine(programRoot, vendor));
+            roots.Add(Path.Combine(programRoot, "Minecraft Launcher", "runtime"));
+            roots.Add(Path.Combine(programRoot, "Minecraft", "runtime"));
+            try
+            {
+                var microsoft = Path.Combine(programRoot, "Microsoft");
+                if (Directory.Exists(microsoft)) roots.AddRange(Directory.EnumerateDirectories(microsoft, "jdk*"));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        foreach (var folder in new[] { gameDirectory, AppInfo.ApplicationDirectory, Path.Combine(AppInfo.ApplicationDirectory, ".minecraft") })
+        {
+            if (string.IsNullOrWhiteSpace(folder)) continue;
+            foreach (var relative in new[] { "runtime", "runtimes", "java", Path.Combine(".97Launch", "runtimes", "java") })
+                roots.Add(Path.Combine(folder, relative));
+        }
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        foreach (var root in roots.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            token.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) continue;
             try
             {
-                foreach (var directory in Directory.EnumerateDirectories(root).Take(40))
-                {
-                    Add(Path.Combine(directory, "bin", "java.exe"));
-                    Add(Path.Combine(directory, "jre", "bin", "java.exe"));
-                }
+                foreach (var path in Directory.EnumerateFiles(root, "java.exe", options))
+                { token.ThrowIfCancellationRequested(); Add(path); }
             }
-            catch
-            {
-                // An unreadable install directory should not hide other runtimes.
-            }
-        }
-
-        var managedRoots = new[] { Path.Combine(AppInfo.DataDirectory, "runtimes", "java") }
-            .Concat(managedRuntimeRoots ?? [])
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-        foreach (var managedRuntimeRoot in managedRoots)
-        {
-            if (!Directory.Exists(managedRuntimeRoot)) continue;
-            try
-            {
-                foreach (var name in new[] { "java.exe", "javaw.exe" })
-                    foreach (var path in Directory.EnumerateFiles(managedRuntimeRoot, name, SearchOption.AllDirectories).Take(100))
-                        Add(path);
-            }
-            catch
-            {
-                // A partial runtime install should not block detection of other Java installations.
-            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            { Serilog.Log.Debug(ex, "跳过无法读取的 Java 搜索目录：{Path}", root); }
         }
 
         return candidates;

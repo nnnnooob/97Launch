@@ -1,6 +1,7 @@
 using Launcher.App.Services;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Launcher.App.Views;
 
 namespace Launcher.App;
 
@@ -12,6 +13,27 @@ public sealed partial class AuthorizationWindow : Window
     private int _pixelWidth;
     private int _pixelHeight;
     private bool _applyingGeometry;
+    public event EventHandler? StartupRetryRequested;
+
+    internal async Task PrepareFirstStartupAsync(CancellationToken token)
+    {
+        Title = AuthorizationTitle.Text = $"{AppInfo.Name} · 首次准备";
+        var view = new StartupInitializationView();
+        view.RetryRequested += (_, _) => StartupRetryRequested?.Invoke(this, EventArgs.Empty);
+        WindowContent.Content = view;
+        await view.RunAsync(token);
+    }
+
+    internal void ShowInitializationError(string message)
+    {
+        if (WindowContent.Content is StartupInitializationView view) view.ShowError(message);
+    }
+
+    internal void ShowPairing()
+    {
+        Title = AuthorizationTitle.Text = $"{AppInfo.Name} · 设备验证";
+        WindowContent.Content = new WelcomePairingView();
+    }
 
     public AuthorizationWindow()
     {

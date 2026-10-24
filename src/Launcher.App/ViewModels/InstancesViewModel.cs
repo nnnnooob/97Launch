@@ -27,6 +27,7 @@ public partial class InstancesViewModel : ObservableObject
     private string? _lastSelectedInstanceId;
     private string? _lastSelectedInstancePath;
     private CancellationTokenSource? _scanCancellation;
+    public Task InitialLoad { get; }
 
     // ======== folders ========
 
@@ -121,7 +122,7 @@ public partial class InstancesViewModel : ObservableObject
             }
         }
 
-        _ = ReloadFoldersAsync();
+        InitialLoad = ReloadFoldersAsync();
     }
 
     partial void OnSelectedFolderChanged(GameFolder? value)

@@ -633,7 +633,7 @@ public sealed class MinecraftInstallService
         var javaPath = settings.SelectedJavaPath;
         if (string.IsNullOrWhiteSpace(javaPath) || !File.Exists(javaPath))
             javaPath = (await JavaRuntimeDetector.DetectAsync(
-                settings.AdditionalJavaPaths, cancellationToken, settings.ManagedJavaRuntimeDirectories)).FirstOrDefault()?.Path;
+                settings.AdditionalJavaPaths, cancellationToken, settings.ManagedJavaRuntimeDirectories, settings.SelectedGameFolderPath)).FirstOrDefault()?.Path;
         if (string.IsNullOrWhiteSpace(javaPath))
             throw new InvalidOperationException("独立安装 OptiFine 需要 Java，请先在设置中添加或选择 Java。");
 
@@ -643,7 +643,7 @@ public sealed class MinecraftInstallService
             || selectedVersion.Major < requiredJava)
         {
             var compatibleRuntime = (await JavaRuntimeDetector.DetectAsync(
-                    settings.AdditionalJavaPaths, cancellationToken, settings.ManagedJavaRuntimeDirectories))
+                    settings.AdditionalJavaPaths, cancellationToken, settings.ManagedJavaRuntimeDirectories, settings.SelectedGameFolderPath))
                 .FirstOrDefault(runtime => Version.TryParse(runtime.Version.Split('-')[0], out var version)
                     && version.Major >= requiredJava);
             if (compatibleRuntime is null)

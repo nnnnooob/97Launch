@@ -70,6 +70,7 @@ try {
     } else if (event.key === 'Home') { resetPose(); event.preventDefault(); }
   });
   canvas.addEventListener('webglcontextlost', () => { viewer.renderPaused = true; });
+  canvas.addEventListener('webglcontextrestored', renderState);
   window.addEventListener('pagehide', () => viewer.dispose(), {once:true});
   renderState();
 } catch (_) {

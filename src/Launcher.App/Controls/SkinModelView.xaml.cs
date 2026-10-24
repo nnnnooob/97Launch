@@ -24,6 +24,9 @@ public sealed partial class SkinModelView : UserControl
     private bool _windowActive = true;
     private bool _contrastSubscribed;
     private string? _shownAccountId;
+    private readonly TaskCompletionSource<bool> _initialization = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal Task<bool> PrepareAsync(CancellationToken token) => _initialization.Task.WaitAsync(TimeSpan.FromSeconds(25), token);
 
     public SkinModelView()
     {
@@ -72,6 +75,7 @@ public sealed partial class SkinModelView : UserControl
                     ResetButton.IsEnabled = true;
                     Fallback.Visibility = Visibility.Collapsed;
                     await UpdateActivityAsync();
+                    _initialization.TrySetResult(true);
                     await UpdateSkinAsync();
                 }
                 catch (Exception ex) { HandleViewerError(ex); }
@@ -133,7 +137,7 @@ public sealed partial class SkinModelView : UserControl
             var state = JsonSerializer.Serialize(new
             {
                 active = _pageActive && _windowActive && IsLoaded,
-                animate = _settings.AnimationsEnabled && !_accessibility.HighContrast,
+                animate = !_accessibility.HighContrast,
                 dark = ActualTheme == ElementTheme.Dark,
                 highContrast = _accessibility.HighContrast,
             });
@@ -174,6 +178,7 @@ public sealed partial class SkinModelView : UserControl
 
     private void ShowFallback(string message)
     {
+        _initialization.TrySetResult(false);
         _ready = false;
         ResetButton.IsEnabled = false;
         FallbackText.Text = message;

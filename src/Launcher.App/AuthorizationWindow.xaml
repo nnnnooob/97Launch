@@ -12,6 +12,8 @@
                 <TextBlock x:Name="AuthorizationTitle" Style="{ThemeResource CaptionTextBlockStyle}" />
             </StackPanel>
         </Grid>
-        <views:WelcomePairingView Grid.Row="1" />
+        <ContentControl x:Name="WindowContent" Grid.Row="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <views:WelcomePairingView />
+        </ContentControl>
     </Grid>
 </Window>

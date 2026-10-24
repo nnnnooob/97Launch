@@ -1,6 +1,6 @@
 # 版本与构建编号
 
-当前发布：**0.1.0-alpha.1 · 构建 1**，默认测试版通道。版本统一在 `Directory.Build.props` 中维护。
+当前发布：**0.1.0-alpha.2 · 构建 2**，默认测试版通道。版本统一在 `Directory.Build.props` 中维护。
 
 ## 显示版本
 
@@ -15,7 +15,7 @@
 | 稳定版修复 | `0.1.1` |
 | 增加一轮新功能 | `0.2.0` |
 
-Git 发布标签使用完整版本与构建编号，例如 `v0.1.0-alpha.1+build.1`。已有 `v0.1.0-alpha.1` 为原源码基线，保留原指向。已发布的版本与标签不覆盖；有变化就递增构建编号，下一轮预发布同时递增为 `alpha.2`。
+Git 发布标签使用完整版本与构建编号，例如 `v0.1.0-alpha.2+build.2`。已有 `v0.1.0-alpha.1` 为原源码基线，保留原指向。已发布的版本与标签不覆盖；有变化就递增构建编号，下一轮预发布同时递增为 `alpha.3`。
 后端服务与启动器独立版本化，后端自己的 API 版本不随本次启动器版本重置。
 
 ## 构建编号
@@ -28,16 +28,16 @@ Git 发布标签使用完整版本与构建编号，例如 `v0.1.0-alpha.1+build
 - 应用短版本显示会去除 `+` 后的构建元数据；更新界面单独显示构建编号。
 - 更新器按发布通道、系统架构与构建编号判断更新，不使用字符串排序，也不把 SemVer 的 `+build.N` 当作版本优先级。
 
-Debug 显示 `v0.1.0-alpha.1-dev`；Release 显示 `v0.1.0-alpha.1`。
+Debug 显示 `v0.1.0-alpha.2-dev`；Release 显示 `v0.1.0-alpha.2`。
 
 ## 发布构建示例
 
 ```powershell
-./publish-release.ps1 -BuildNumber 1 -Channel preview -Restart
+./publish-release.ps1 -BuildNumber 2 -Channel preview -Restart
 ```
 
-稳定版通过命令行显式传空后缀：`-p:VersionSuffix=`。
-示例编号 `1` 仅作说明；实际发布必须选择尚未使用的递增编号。
+发布稳定版前，在 `Directory.Build.props` 清空 `VersionSuffix`，再使用 `-Channel stable` 生成签名清单。
+构建编号 `2` 已用于本次发布；后续发布必须选择尚未使用的递增编号。
 
 发布工具需要 PowerShell 7 和本机签名私钥。产物为根目录单文件 `97Launch.exe`，以及 `artifacts/releases/<版本>-build.<编号>` 中用于后台上传的 EXE 与签名清单。构建编号 `0` 不进入正式发布序列。
 

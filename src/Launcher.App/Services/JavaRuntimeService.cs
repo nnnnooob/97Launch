@@ -59,7 +59,7 @@ public sealed class JavaRuntimeService
             .Concat(settings.AdditionalJavaPaths ?? [])
             .Where(path => !string.IsNullOrWhiteSpace(path));
         var runtimes = await JavaRuntimeDetector.DetectAsync(
-            paths, cancellationToken, settings.ManagedJavaRuntimeDirectories);
+            paths, cancellationToken, settings.ManagedJavaRuntimeDirectories, settings.SelectedGameFolderPath);
         var selected = SelectInstalledRuntime(runtimes, requirement);
         var fallback = runtimes.FirstOrDefault(runtime =>
             JavaRuntimeDetector.IsSameRuntime(runtime.Path, settings.SelectedJavaPath)) ?? runtimes.FirstOrDefault();

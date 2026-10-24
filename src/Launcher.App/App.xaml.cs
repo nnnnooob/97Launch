@@ -30,6 +30,19 @@ public partial class App : Application
     private readonly DispatcherTimer _authorizationTimer = new() { Interval = TimeSpan.FromMinutes(15) };
     private bool _switchingWindows;
     private bool _shuttingDown;
+    private CancellationTokenSource? _preparationCancellation;
+    private static string StartupMarker => Path.Combine(AppInfo.DataDirectory, "startup-v1.json");
+
+    private static bool NeedsFirstPreparation()
+    {
+        try
+        {
+            using var marker = System.Text.Json.JsonDocument.Parse(File.ReadAllText(StartupMarker));
+            return !marker.RootElement.TryGetProperty("schema", out var schema) || !schema.TryGetInt32(out var version) || version != 1;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
+        { return true; }
+    }
 
     public App()
     {
@@ -89,6 +102,7 @@ public partial class App : Application
         {
             _authorizationWindow = new AuthorizationWindow();
             _authorizationWindow.Closed += WindowClosed;
+            _authorizationWindow.StartupRetryRequested += (_, _) => _dispatcher.TryEnqueue(UpdateAuthorizedWindow);
         }
         MainWindow = _authorizationWindow;
         _authorizationWindow.Activate();
@@ -96,7 +110,7 @@ public partial class App : Application
         Log.Information("独立验证窗口已显示，等待设备授权");
     }
 
-    private void UpdateAuthorizedWindow()
+    private async void UpdateAuthorizedWindow()
     {
         if (_shuttingDown || _switchingWindows) return;
         _switchingWindows = true;
@@ -107,6 +121,15 @@ public partial class App : Application
             {
                 if (_authorizationWindow is null && _shellWindow is not null) return;
                 var first = _shellWindow is null;
+                var prepared = false;
+                if (first && NeedsFirstPreparation() && _authorizationWindow is { } preparationWindow)
+                {
+                    _preparationCancellation = new CancellationTokenSource();
+                    await preparationWindow.PrepareFirstStartupAsync(_preparationCancellation.Token);
+                    if (_shuttingDown) return;
+                    if (!authorization.IsAuthorized) { preparationWindow.ShowPairing(); return; }
+                    prepared = true;
+                }
                 if (first)
                 {
                     _shellWindow = new MainWindow();
@@ -120,9 +143,15 @@ public partial class App : Application
                     _shellWindow.Closed += WindowClosed;
                 }
                 _authorizationTimer.Start();
+                if (prepared)
+                {
+                    try { UpdateTrust.Save(StartupMarker, new { schema = 1, completed_at = DateTimeOffset.UtcNow }); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    { Log.Warning(ex, "首次初始化标记未能保存，下次启动将重新准备"); }
+                }
                 var previous = _authorizationWindow;
                 _authorizationWindow = null;
-                previous?.Close();
+                if (previous is not null) { previous.Closed -= WindowClosed; previous.Close(); }
                 Log.Information("授权通过：主窗口已显示，独立验证窗口已关闭");
                 if (first) StartAuthorizedServices();
             }
@@ -135,13 +164,25 @@ public partial class App : Application
                 _shellWindow?.AppWindow.Hide();
             }
         }
-        finally { _switchingWindows = false; }
+        catch (OperationCanceledException) when (_shuttingDown) { }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "初始化主窗口失败");
+            _authorizationWindow?.ShowInitializationError("本地环境准备失败：" + ex.Message);
+        }
+        finally
+        {
+            _preparationCancellation?.Dispose();
+            _preparationCancellation = null;
+            _switchingWindows = false;
+        }
     }
 
     private void WindowClosed(object sender, WindowEventArgs args)
     {
-        if (_switchingWindows || _shuttingDown) return;
+        if (_shuttingDown) return;
         _shuttingDown = true;
+        _preparationCancellation?.Cancel();
         Log.Information("97Launch 正在退出");
         _authorizationTimer.Stop();
         var authorization = Services.GetRequiredService<LauncherAuthorizationService>();
@@ -162,7 +203,7 @@ public partial class App : Application
         activity.Append($"数据目录：{AppInfo.DataDirectory}");
 
         Log.Debug("Device authorization accepted; main shell initialized");
-        _ = PreloadNetworkMetadataAsync();
+        _ = Task.Run(PreloadNetworkMetadataAsync);
     }
 
     private static async Task PreloadNetworkMetadataAsync()
