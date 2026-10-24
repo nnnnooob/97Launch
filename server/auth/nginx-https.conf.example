@@ -51,12 +51,16 @@ server {
         proxy_read_timeout 90s;
         send_timeout 90s;
     }
+    location = /api/admin/releases { proxy_pass http://127.0.0.1:18797; }
     location /api/admin/releases/ {
         client_max_body_size 1m;
         client_body_buffer_size 32k;
+        client_body_timeout 90s;
         proxy_request_buffering off;
+        proxy_http_version 1.1;
         proxy_pass http://127.0.0.1:18797;
         proxy_read_timeout 300s;
+        proxy_send_timeout 90s;
     }
     location /api/admin/ { proxy_pass http://127.0.0.1:18797; }
     location /static/ { proxy_pass http://127.0.0.1:18797; }
