@@ -1,0 +1,4 @@
+skinview3d 3.4.2
+https://github.com/bs-community/skinview3d
+Bundled from https://registry.npmjs.org/skinview3d/-/skinview3d-3.4.2.tgz
+Bundled dependencies retain their accompanying licenses.

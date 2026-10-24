@@ -1,0 +1,27 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="SidebarSelectionBrush" Color="#100A59F7" />
+            <SolidColorBrush x:Key="SidebarSelectionStrokeBrush" Color="#280A59F7" />
+            <SolidColorBrush x:Key="SidebarSelectedTextBrush" Color="#0846C4" />
+            <SolidColorBrush x:Key="SidebarIconBackgroundBrush" Color="#080A59F7" />
+            <SolidColorBrush x:Key="SidebarBadgeBackgroundBrush" Color="#0D0A59F7" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Default">
+            <SolidColorBrush x:Key="SidebarSelectionBrush" Color="#245C95FF" />
+            <SolidColorBrush x:Key="SidebarSelectionStrokeBrush" Color="#405C95FF" />
+            <SolidColorBrush x:Key="SidebarSelectedTextBrush" Color="#A6C7FF" />
+            <SolidColorBrush x:Key="SidebarIconBackgroundBrush" Color="#125C95FF" />
+            <SolidColorBrush x:Key="SidebarBadgeBackgroundBrush" Color="#205C95FF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="SidebarSelectionBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="SidebarSelectionStrokeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SidebarSelectedTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="SidebarIconBackgroundBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="SidebarBadgeBackgroundBrush" Color="Transparent" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

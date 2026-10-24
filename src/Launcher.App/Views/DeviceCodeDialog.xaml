@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Minecraft sign-in helper window, modelled on PCL's MyMsgLogin: a title, a short
+  explanation with the code inline, and three buttons — reopen the page, copy the
+  code, cancel. Closing or cancelling stops the polling.
+-->
+<ContentDialog
+    x:Class="Launcher.App.Views.DeviceCodeDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="登录 Minecraft"
+    PrimaryButtonText="重新打开网页"
+    SecondaryButtonText="复制代码"
+    CloseButtonText="取消"
+    DefaultButton="Close">
+
+    <StackPanel Width="400" Spacing="14">
+        <TextBlock
+            FontSize="13.5"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            LineHeight="20"
+            TextWrapping="Wrap">
+            <Run Text="登录网页将自动开启，请在网页中输入" />
+            <Run FontWeight="SemiBold" Text="{x:Bind ViewModel.DeviceCode, Mode=OneWay}" />
+            <Run Text="（已自动复制）。" />
+        </TextBlock>
+
+        <TextBlock
+            FontSize="12.5"
+            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+            LineHeight="19"
+            TextWrapping="Wrap"
+            Text="如果网络环境不佳，网页可能一直加载不出来，届时请使用加速器或 VPN 改善网络环境。你也可以用其他设备打开下面的网址并输入上述代码。" />
+
+        <Border
+            Padding="14,10"
+            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+            CornerRadius="6">
+            <TextBlock
+                FontFamily="Consolas"
+                FontSize="15"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.VerificationUri, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
+        </Border>
+
+        <TextBlock
+            FontSize="12"
+            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+            Text="{x:Bind ViewModel.ErrorText, Mode=OneWay}"
+            TextWrapping="Wrap"
+            Visibility="{x:Bind ViewModel.HasError, Mode=OneWay}" />
+    </StackPanel>
+</ContentDialog>

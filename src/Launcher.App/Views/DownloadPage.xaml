@@ -1,0 +1,369 @@
+﻿<Page
+    x:Class="Launcher.App.Views.DownloadPage"
+    NavigationCacheMode="Required"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Launcher.App.Controls">
+
+    <Page.Resources>
+        <SolidColorBrush x:Key="ExpanderChevronBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="ExpanderChevronPointerOverBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="ExpanderChevronPressedBackground" Color="Transparent" />
+        <Style x:Key="ResourceRowStyle" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="RowSurface" CornerRadius="8" BorderThickness="1"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters><Setter Target="RowSurface.Background" Value="{ThemeResource ControlFillColorSecondaryBrush}" /></VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters><Setter Target="RowSurface.Background" Value="{ThemeResource ControlFillColorTertiaryBrush}" /></VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="Stretch" Padding="0" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- One compact version row shared by all five Minecraft groups. -->
+        <DataTemplate x:Key="McVersionTemplate">
+            <Grid>
+                <!-- Full-card hit target, sitting under the content. -->
+                <Button
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Click="VersionCard_Click"
+                    Style="{ThemeResource CardHitTargetStyle}"
+                    Tag="{Binding}"
+                    ToolTipService.ToolTip="安装该版本" />
+
+                <!-- Content layer, inert so the click always reaches the button. -->
+                <Grid
+                    Padding="14,10"
+                    ColumnSpacing="12"
+                    IsHitTestVisible="False">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border
+                        Width="38"
+                        Height="38"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8">
+                        <Image
+                            Width="30"
+                            Height="30"
+                            Source="{Binding IconPath}"
+                            Stretch="Uniform" />
+                    </Border>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Spacing="3">
+                        <TextBlock Style="{ThemeResource InstanceNameTextStyle}" FontSize="15" Text="{Binding Name}" />
+                        <TextBlock Style="{ThemeResource InstanceMetaTextStyle}" Text="{Binding ReleaseType}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center"
+                               Style="{ThemeResource InstanceMetaTextStyle}"
+                               Text="{Binding ReleaseDate}" />
+                </Grid>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Project cards share the current instance browser's row styling. -->
+        <DataTemplate x:Key="ResourceTemplate">
+            <Grid ColumnSpacing="12" Padding="14,12" MinHeight="96">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border
+                    Width="46"
+                    Height="46"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                    CornerRadius="8">
+                    <Grid>
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   FontSize="18" Text="{Binding AvatarText}" Visibility="Collapsed" />
+                        <Image Source="{Binding IconUrl}" Stretch="Uniform"
+                               ImageFailed="ResourceIcon_ImageFailed" />
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                    <TextBlock FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                    <TextBlock FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Text="{Binding InstalledState}" Visibility="{Binding InstalledVisibility}" />
+                    <TextBlock Style="{ThemeResource InstanceMetaTextStyle}" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Border Style="{ThemeResource LoaderBadgeStyle}">
+                            <TextBlock Style="{ThemeResource LoaderBadgeTextStyle}" Text="{Binding Source}" />
+                        </Border>
+                        <Border Style="{ThemeResource LoaderBadgeStyle}">
+                            <TextBlock Style="{ThemeResource LoaderBadgeTextStyle}" Text="{Binding Category}" />
+                        </Border>
+                        <Border Style="{ThemeResource LoaderBadgeStyle}" Visibility="{Binding LoaderVisibility}">
+                            <TextBlock Style="{ThemeResource LoaderBadgeTextStyle}" Text="{Binding LoaderLabel}" />
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right">
+                        <FontIcon FontFamily="Segoe Fluent Icons" FontSize="12" Glyph="&#xE896;" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{Binding Downloads}" />
+                    </StackPanel>
+                    <FontIcon Margin="0,8,0,0" HorizontalAlignment="Right"
+                              FontFamily="Segoe Fluent Icons" FontSize="13" Glyph="&#xE76C;"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid>
+        <Grid x:Name="DownloadLayout" Padding="24,20,24,16" ColumnSpacing="16" SizeChanged="DownloadLayout_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="CategoryColumn" Width="216" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+        <!-- ============ left rail: the five categories ============ -->
+        <Border Style="{ThemeResource FolderRailStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Style="{ThemeResource SidebarHeaderStyle}"
+                    Text="下载内容" />
+
+                <controls:SidebarList
+                    x:Name="SectionList"
+                    Grid.Row="1"
+                    Margin="0,0,0,12"
+                    SelectionChanged="SectionList_SelectionChanged"
+                    SelectionMode="Single">
+                    <ListViewItem Tag="minecraft" IsSelected="True">
+                        <controls:SidebarItem Title="Minecraft" Icon="{StaticResource IconCube}" />
+                    </ListViewItem>
+
+                    <ListViewItem Tag="mod">
+                        <controls:SidebarItem Title="Mod" Icon="{StaticResource IconPuzzle}" />
+                    </ListViewItem>
+
+                    <ListViewItem Tag="modpack">
+                        <controls:SidebarItem Title="整合包" Icon="{StaticResource IconPackage}" />
+                    </ListViewItem>
+
+                    <ListViewItem Tag="shader">
+                        <controls:SidebarItem Title="光影包" Icon="{StaticResource IconSun}" />
+                    </ListViewItem>
+
+                    <ListViewItem Tag="resourcepack">
+                        <controls:SidebarItem Title="资源包" Icon="{StaticResource IconBox}" />
+                    </ListViewItem>
+
+                    <ListViewItem Tag="datapack">
+                        <controls:SidebarItem Title="数据包" Icon="{StaticResource IconDatabase}" />
+                    </ListViewItem>
+                </controls:SidebarList>
+            </Grid>
+        </Border>
+
+        <!-- ============ right side ============ -->
+        <Grid Grid.Column="1">
+
+            <!--   Minecraft: five collapsible groups   -->
+            <ScrollViewer
+                x:Name="MinecraftScroller"
+                Visibility="{x:Bind ViewModel.IsMinecraft, Mode=OneWay}">
+                <StackPanel Spacing="10">
+
+                    <!--
+                      Fetch state. Both stay collapsed once data arrives; the
+                      bar only shows during the initial manifest download.
+                    -->
+                    <ProgressBar
+                        x:Name="VersionLoadingBar"
+                        IsIndeterminate="True"
+                        Visibility="Collapsed" />
+
+                    <Border
+                        x:Name="VersionErrorPanel"
+                        Padding="14,10"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="Collapsed">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="VersionErrorText"
+                                VerticalAlignment="Center"
+                                TextWrapping="Wrap" />
+                            <Button
+                                Grid.Column="1"
+                                Click="RetryVersions_Click"
+                                Content="重试" />
+                        </Grid>
+                    </Border>
+
+                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <Border Padding="16,12" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="最新版本" /><TextBlock x:Name="LatestCount" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel></Border>
+                            <Grid Grid.Row="1" Padding="6"><ListView x:Name="LatestList" Style="{StaticResource InstanceGroupListStyle}" ItemContainerStyle="{StaticResource InstanceGroupRowStyle}" ItemTemplate="{StaticResource McVersionTemplate}" ItemsSource="{x:Bind ViewModel.LatestVersions}" /></Grid>
+                        </Grid>
+                    </Border>
+
+                    <Expander x:Name="ReleaseSection" Style="{StaticResource InstanceGroupStyle}" IsExpanded="{x:Bind ViewModel.IsReleaseExpanded, Mode=TwoWay}">
+                        <Expander.Header><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="正式版" /><TextBlock x:Name="ReleaseCount" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel></Expander.Header>
+                        <ListView x:Name="ReleaseList" Style="{StaticResource InstanceGroupListStyle}" ItemContainerStyle="{StaticResource InstanceGroupRowStyle}" ItemTemplate="{StaticResource McVersionTemplate}" ItemsSource="{x:Bind ViewModel.ReleaseVersions}" />
+                    </Expander>
+
+                    <Expander x:Name="PreviewSection" Style="{StaticResource InstanceGroupStyle}" IsExpanded="{x:Bind ViewModel.IsPreviewExpanded, Mode=TwoWay}">
+                        <Expander.Header><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="预览版" /><TextBlock x:Name="PreviewCount" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel></Expander.Header>
+                        <ListView x:Name="PreviewList" Style="{StaticResource InstanceGroupListStyle}" ItemContainerStyle="{StaticResource InstanceGroupRowStyle}" ItemTemplate="{StaticResource McVersionTemplate}" ItemsSource="{x:Bind ViewModel.PreviewVersions}" />
+                    </Expander>
+
+                    <Expander x:Name="OldSection" Style="{StaticResource InstanceGroupStyle}" IsExpanded="{x:Bind ViewModel.IsOldExpanded, Mode=TwoWay}">
+                        <Expander.Header><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="远古版" /><TextBlock x:Name="OldCount" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel></Expander.Header>
+                        <ListView x:Name="OldList" Style="{StaticResource InstanceGroupListStyle}" ItemContainerStyle="{StaticResource InstanceGroupRowStyle}" ItemTemplate="{StaticResource McVersionTemplate}" ItemsSource="{x:Bind ViewModel.OldVersions}" />
+                    </Expander>
+
+                    <Expander x:Name="FoolsSection" Style="{StaticResource InstanceGroupStyle}" IsExpanded="{x:Bind ViewModel.IsFoolsExpanded, Mode=TwoWay}">
+                        <Expander.Header><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="愚人节版" /><TextBlock x:Name="FoolsCount" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel></Expander.Header>
+                        <ListView x:Name="FoolsList" Style="{StaticResource InstanceGroupListStyle}" ItemContainerStyle="{StaticResource InstanceGroupRowStyle}" ItemTemplate="{StaticResource McVersionTemplate}" ItemsSource="{x:Bind ViewModel.FoolsVersions}" />
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Visibility="{x:Bind ViewModel.IsResourceSection, Mode=OneWay}" RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" /><RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Padding="12,8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="InstallTargetLabel" VerticalAlignment="Center" Text="安装到" FontSize="13"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <ComboBox x:Name="InstallTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      DisplayMemberPath="Label" SelectionChanged="InstallTargetCombo_SelectionChanged"
+                                      PlaceholderText="选择安装目标" />
+                        </Grid>
+                        <Grid x:Name="WorldTargetPanel" ColumnSpacing="10" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" FontSize="13" Text="存档世界" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <ComboBox x:Name="WorldTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch" DisplayMemberPath="Name"
+                                      PlaceholderText="暂无可用存档，可在详情中另存为" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Grid Grid.Row="1" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="124" /></Grid.ColumnDefinitions>
+                    <AutoSuggestBox x:Name="ResourceSearchBox" PlaceholderText="{x:Bind ViewModel.ResourceTitle, Mode=OneWay}"
+                                    QueryIcon="Find" Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
+                                    TextChanged="ResourceSearchBox_TextChanged" QuerySubmitted="ResourceSearchBox_QuerySubmitted" />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.Sources}"
+                              SelectedItem="{x:Bind ViewModel.SelectedSource, Mode=TwoWay}" />
+                </Grid>
+                <Grid Grid.Row="2" ColumnSpacing="7">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition x:Name="ResourceLoaderColumn" Width="*" />
+                        <ColumnDefinition Width="*" /><ColumnDefinition x:Name="ResolutionColumn" Width="0" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.GameVersions}"
+                              IsEditable="True" TextSubmitted="GameVersionFilter_TextSubmitted"
+                              SelectedItem="{x:Bind ViewModel.SelectedGameVersion, Mode=TwoWay}" />
+                    <ComboBox x:Name="ResourceLoaderCombo" Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind ViewModel.Loaders, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedLoader, Mode=TwoWay}" />
+                    <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.Tags, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedTag, Mode=TwoWay}" />
+                    <ComboBox x:Name="ResolutionCombo" Grid.Column="3" HorizontalAlignment="Stretch" Visibility="Collapsed"
+                              ItemsSource="{x:Bind ViewModel.Resolutions}"
+                              SelectedItem="{x:Bind ViewModel.SelectedResolution, Mode=TwoWay}" />
+                    <Button Grid.Column="4" Click="ResetFilter_Click" Content="重置" />
+                </Grid>
+                <StackPanel Grid.Row="3" Spacing="6">
+                    <InfoBar x:Name="ResourceErrorBar" IsOpen="False" IsClosable="False" Severity="Warning" />
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ResourceHeading" VerticalAlignment="Center" FontSize="13"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <ComboBox Grid.Column="1" MinWidth="112" ItemsSource="{x:Bind ViewModel.Sorts}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}" />
+                    </Grid>
+                </StackPanel>
+                <Grid Grid.Row="4">
+                    <ListView x:Name="ResourceList" Padding="0,0,10,0"
+                              ItemContainerStyle="{StaticResource ResourceRowStyle}"
+                              ItemTemplate="{StaticResource ResourceTemplate}"
+                              ItemsSource="{x:Bind ViewModel.Resources}" SelectionMode="None"
+                              IsItemClickEnabled="True" ItemClick="ResourceList_ItemClick"
+                              ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                    <StackPanel x:Name="EmptyHintPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                MaxWidth="420" Spacing="12" Visibility="Collapsed">
+                        <TextBlock x:Name="EmptyHint" TextAlignment="Center" TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Button HorizontalAlignment="Center" Click="ResetFilter_Click" Content="重置条件" />
+                    </StackPanel>
+                    <ProgressRing x:Name="ResourceLoadingRing" Width="30" Height="30" HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsResourceLoading, Mode=OneWay}" Visibility="Collapsed" />
+                </Grid>
+                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                    <Button Click="PreviousResources_Click" IsEnabled="{x:Bind ViewModel.CanPreviousResourcePage, Mode=OneWay}" ToolTipService.ToolTip="上一页">
+                        <FontIcon FontFamily="Segoe Fluent Icons" FontSize="13" Glyph="&#xE76B;" />
+                    </Button>
+                    <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="{x:Bind ViewModel.ResultCountText, Mode=OneWay}" />
+                    <Button Click="NextResources_Click" IsEnabled="{x:Bind ViewModel.CanNextResourcePage, Mode=OneWay}" ToolTipService.ToolTip="下一页">
+                        <FontIcon FontFamily="Segoe Fluent Icons" FontSize="13" Glyph="&#xE76C;" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+        </Grid>
+
+        <!-- Same page-level host placement as the instance settings dialog. -->
+        <Grid
+            x:Name="InstallDialogHost"
+            Canvas.ZIndex="100"
+            Visibility="Collapsed" />
+    </Grid>
+</Page>

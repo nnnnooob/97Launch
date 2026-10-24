@@ -1,0 +1,93 @@
+<UserControl
+    x:Class="Launcher.App.Views.WelcomePairingView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Launcher.App.Controls">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WelcomeBackground" Color="#F3F6FC" />
+                    <SolidColorBrush x:Key="WelcomeSurface" Color="White" />
+                    <SolidColorBrush x:Key="WelcomeText" Color="#17243D" />
+                    <SolidColorBrush x:Key="WelcomeMuted" Color="#5D6E87" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="WelcomeBackground" Color="#171C27" />
+                    <SolidColorBrush x:Key="WelcomeSurface" Color="#212938" />
+                    <SolidColorBrush x:Key="WelcomeText" Color="#F4F7FC" />
+                    <SolidColorBrush x:Key="WelcomeMuted" Color="#B6C4DA" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="WelcomeBackground" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WelcomeSurface" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WelcomeText" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="WelcomeMuted" Color="{ThemeResource SystemColorWindowTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <Style x:Key="PairButtonStyle" TargetType="Button" BasedOn="{StaticResource LaunchButtonStyle}">
+                <Setter Property="Height" Value="50" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Template"><Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="LaunchSurface" Background="{TemplateBinding Background}" CornerRadius="12">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="FocusStates">
+                                    <VisualState x:Name="Focused"><VisualState.Setters><Setter Target="FocusOutline.Opacity" Value="1" /></VisualState.Setters></VisualState>
+                                    <VisualState x:Name="PointerFocused" />
+                                    <VisualState x:Name="Unfocused" />
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Grid x:Name="LaunchShine" IsHitTestVisible="False" />
+                            <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" IsHitTestVisible="False" />
+                            <Border x:Name="FocusOutline" Opacity="0" Margin="4" CornerRadius="8" BorderBrush="White" BorderThickness="2" IsHitTestVisible="False" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value></Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Background="{ThemeResource WelcomeBackground}" SizeChanged="Root_SizeChanged">
+        <Grid x:Name="WelcomeCard" Margin="20" MaxWidth="1040" MaxHeight="636" Background="{ThemeResource WelcomeSurface}" CornerRadius="22" SizeChanged="Card_SizeChanged">
+            <Grid.ColumnDefinitions><ColumnDefinition x:Name="FormColumn" Width="51*" /><ColumnDefinition x:Name="SceneColumn" Width="49*" /></Grid.ColumnDefinitions>
+            <Grid x:Name="ScenePanel" Grid.Column="1" IsHitTestVisible="False" SizeChanged="ScenePanel_SizeChanged">
+                <Image x:Name="SceneImage" Source="ms-appx:///Assets/Welcome/minecraft-valley.png" Stretch="UniformToFill" Margin="-8" AutomationProperties.Name="清晨的 Minecraft 山谷与蓝色湖泊" />
+                <Path Width="84" HorizontalAlignment="Left" Stretch="Fill" Fill="{ThemeResource WelcomeSurface}"
+                      Data="M0,0 L84,0 C25,26 28,74 51,127 C100,228 8,282 42,387 C69,482 -4,547 34,636 L0,636 Z" />
+            </Grid>
+            <Grid x:Name="FormPanel" Margin="40,30,34,24">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Image Source="ms-appx:///Assets/AppIcon.png" Width="32" Height="32" />
+                    <TextBlock Text="97Launch" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource WelcomeText}" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch" VerticalAlignment="Center" Margin="0,24,0,16">
+                    <StackPanel x:Name="FormContent" HorizontalAlignment="Stretch" Spacing="0">
+                        <TextBlock x:Name="WelcomeHeading" FontFamily="Segoe UI Variable Display" FontSize="40" FontWeight="SemiBold" Text="Welcome" Foreground="{ThemeResource WelcomeText}" Margin="0,0,0,32" />
+                        <Grid x:Name="TokenLabel" Margin="0,0,0,8">
+                            <TextBlock Text="配对 Token" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock Text="5 分钟内有效" FontSize="12" HorizontalAlignment="Right" Foreground="{ThemeResource WelcomeMuted}" />
+                        </Grid>
+                        <TextBox x:Name="TokenInput" Height="48" MaxLength="128" FontFamily="Consolas" FontSize="15" Padding="14,12" CornerRadius="12"
+                                 TextWrapping="NoWrap" AcceptsReturn="False" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
+                                 PlaceholderText="输入 Token" AutomationProperties.Name="配对 Token" KeyDown="TokenInput_KeyDown" TextChanged="TokenInput_TextChanged" />
+                        <TextBlock x:Name="StatusText" Visibility="Collapsed" Margin="0,10,0,0" FontSize="12" LineHeight="18" TextWrapping="Wrap" Foreground="{ThemeResource WelcomeMuted}" AutomationProperties.LiveSetting="Polite" />
+                        <controls:LaunchActionButton x:Name="PairButton" Margin="0,20,0,0" Style="{StaticResource PairButtonStyle}" Click="PairButton_Click" AutomationProperties.Name="配对并进入">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ProgressRing x:Name="PairProgress" Width="18" Height="18" Foreground="White" Visibility="Collapsed" IsActive="False" />
+                                <TextBlock x:Name="PairButtonText" Text="配对并进入" FontSize="16" VerticalAlignment="Center" />
+                                <FontIcon x:Name="PairArrow" Glyph="&#xE72A;" FontSize="16" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </controls:LaunchActionButton>
+                        <Grid Margin="0,8,0,0">
+                            <HyperlinkButton x:Name="HelpButton" Content="如何获取 Token？" FontSize="13" Padding="0,8" Click="HelpButton_Click" />
+                            <HyperlinkButton x:Name="CancelButton" Content="取消验证" FontSize="13" Padding="0,8" HorizontalAlignment="Right" Visibility="Collapsed" Click="CancelButton_Click" />
+                            <HyperlinkButton x:Name="RePairButton" Content="重新配对" FontSize="13" Padding="0,8" Visibility="Collapsed" Click="RePairButton_Click" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+                <TextBlock x:Name="VersionText" Grid.Row="2" FontSize="11" Foreground="{ThemeResource WelcomeMuted}" />
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

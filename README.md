@@ -12,15 +12,33 @@
 
 ## 关于本仓库
 
-本仓库仅用于说明 97Launch 这个软件及其对 Minecraft 服务 API 的使用方式。
-**源代码未包含在本仓库中**，仅存在于开发者本地。
+本仓库保存启动器、授权服务、管理后台及 NoneBot 插件源码。
+版本与构建编号规则见 [VERSIONING.md](VERSIONING.md)。
+
+游戏实例、下载缓存、账号凭据、服务端密钥和本地部署记录不纳入版本管理。
+
+## 开发与构建
+
+使用 Windows、.NET 8 SDK，以及支持 WinUI 3 的 Visual Studio 构建工具。
+
+```powershell
+dotnet restore src/Launcher.App/Launcher.App.csproj -p:Platform=x64
+dotnet build src/Launcher.App/Launcher.App.csproj -p:Platform=x64
+```
+
+项目采用非 MSIX 部署方式。运行构建目录中的 `Launcher.App.exe`。
+构建前按 `authorization-server.example.json` 在仓库根目录创建本地 `authorization-server.json`，填写实际服务地址；该文件已被 Git 忽略，会随构建复制到程序目录。配置和证书验证说明见 [客户端接入文档](server/auth/LAUNCHER.md)。
+授权服务的部署与配置见 [server/auth/README.md](server/auth/README.md)，
+服务器目录与整合包接口见 [server/auth/CATALOG.md](server/auth/CATALOG.md)。
 
 ## 主要功能
 
 - **实例管理** — 为每个整合包 / 版本建立独立实例，互不干扰
 - **账号管理** — 支持微软账号（正版）、离线账号与第三方验证服务器
 - **版本下载** — 从官方源获取游戏本体与加载器
-- **运行日志** — 启动过程实时可见，出问题能直接定位
+- **启动记录** — 持久化记录实例启动情况，运行日志保存在本机供排查
+- **服务器列表** — 获取关联实例并启动加入服务器
+- **皮肤预览** — 显示账号皮肤模型，支持行走动画与拖动旋转
 - **原生界面** — WinUI 3 实现，跟随系统主题与 DPI
 
 ## 为什么要用微软账号登录
@@ -49,12 +67,14 @@ Microsoft OAuth 完成登录，才能取得玩家自己的游戏档案。
 ## 我们不做什么
 
 - 不收集、不存储用户的微软账号密码
-- 不将任何用户数据上传至第三方服务器
+- 不将微软游戏账号凭据上传至启动器授权服务器
 - 不包含统计上报、广告或任何形式的追踪
 - 不修改、不重新分发 Minecraft 游戏文件
 - 不用于任何商业目的
 
 所有账号令牌使用 Windows DPAPI 加密后保存在用户本机。
+
+小范围使用的设备配对通过自有授权服务器完成。配对记录包含申请人的 QQ、群号、昵称、设备名称、平台、启动器版本及最近连接时间/IP；此授权与 Minecraft 游戏账号分开，设备凭据使用 Windows DPAPI 加密保存在本机。
 
 ## 系统要求
 

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain logic: instance scanning and grouping, version manifest access, and
+    whatever download/launch code follows. Deliberately a plain net8.0 library
+    with no windows-specific TFM, so it cannot accidentally acquire a WinUI or
+    WinRT dependency, and so it can be referenced by a test project on any host.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Launcher.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Abstractions only, not the full logging implementation. Core needs to log
+      but must not decide where those logs go; the app wires Serilog behind this
+      interface in AppServiceProvider.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>

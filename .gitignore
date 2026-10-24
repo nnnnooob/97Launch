@@ -1,0 +1,104 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Publish output
+publish/
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+
+## Rider / VS
+.idea/
+.vs/
+*.DotSettings.user
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+## Local runtime data (never commit)
+local/
+runtimes/
+*.log
+.minecraft/
+.97Launch/
+/artifacts/
+/backups/
+/design/
+/HANDOFF.md
+/screenshot.png
+/server/auth/DEPLOYMENT.md
+/server/auth/open-admin.ps1
+
+## Local credentials and service state
+.env
+.env.*
+!.env.example
+*.key
+*.pfx
+*.p12
+*.pem
+!/server/auth/97launch-auth-ca.pem
+secrets.json
+credentials.json
+accounts.json
+authorization.dat
+*.sqlite*
+*.db
+
+## Python / JavaScript caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.pytest_cache/
+
+## OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## Scratch files from manual UI testing (screenshots, click helpers, pid dumps)
+_*.png
+_*.py
+_*.txt
+*.binlog
+*.bak
+*.backup
+*.orig
+*.tmp
+
+## Private deployment configuration
+authorization-server.json
+deployment.env
+server-access.json

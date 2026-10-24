@@ -1,0 +1,4 @@
+{
+  "base_url": "https://auth.example.com:18443/",
+  "private_ca": false
+}

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    IgnorableNamespaces="uap mp rescap">
+
+  <!--
+    97Launch ships as an unpackaged (portable) application.
+
+    This manifest exists because EnableMsixTooling demands a well-formed package
+    manifest for resources.pri generation. It is a build input only: the app is
+    never installed from it, and no package identity is registered at runtime.
+
+    The Identity element below is required by APPX1504 validation. It carries a
+    fixed, non-colliding name so repeated local builds stay reproducible.
+  -->
+  <Identity
+      Name="97Launch"
+      Publisher="CN=97Launch"
+      Version="1.0.0.0"
+      ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>97Launch</DisplayName>
+    <PublisherDisplayName>97Launch</PublisherDisplayName>
+    <Logo>Assets\AppIcon.ico</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="zh-CN" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+          DisplayName="97Launch"
+          Description="Minecraft: Java Edition Launcher"
+          BackgroundColor="transparent"
+          Square150x150Logo="Assets\AppIcon.ico"
+          Square44x44Logo="Assets\AppIcon.ico" />
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+</Package>

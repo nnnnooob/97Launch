@@ -1,0 +1,142 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Launcher.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+
+    <UseWinUI>true</UseWinUI>
+
+    <!--
+      Unpackaged + self-contained.
+
+      WindowsPackageType=None declares that this app has no MSIX package
+      identity. Without it the SDK assumes package identity, wires up
+      DeploymentManager, and the process dies on startup with
+      REGDB_E_CLASSNOTREG while activating DeploymentInitializeOptions, because
+      there is no package to find.
+
+      WindowsAppSDKSelfContained=true copies the Windows App SDK runtime next to
+      the exe, so the app does not depend on which runtime version a given
+      machine happens to have installed.
+    -->
+    <WindowsPackageType>None</WindowsPackageType>
+
+    <!--
+      MSIX tooling stays off: there is no package to produce, and enabling it
+      drags in the Appx packaging targets, which need the "MSIX Packaging Tools"
+      Visual Studio component that is not installed here.
+    -->
+    <EnableMsixTooling>false</EnableMsixTooling>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+
+    <!--
+      MRT Core and PRI generation are switched off.
+
+      Both pull in MrtCore.PriGen.targets, whose tasks (ExpandPriContent,
+      RemovePayloadDuplicates) live in Microsoft.Build.Packaging.Pri.Tasks.dll
+      and Microsoft.Build.AppxPackage.dll under
+      $(MSBuildExtensionsPath)\Microsoft\VisualStudio\v17.0\AppxPackage\. That
+      folder only exists with the "MSIX Packaging Tools" Visual Studio
+      component, which is absent here, so the tasks fail to load and the build
+      stops.
+
+      Neither is needed for an unpackaged build: XAML ships as compiled .xbf
+      beside the exe, resource indexing belongs to MSIX, and the UI is
+      single-language so there is nothing for MRT to look up.
+    -->
+    <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
+    <MakePriExeFullPath></MakePriExeFullPath>
+
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Microsoft.Windows.SDK.BuildTools.WinApp is what makes MarkupCompilePass2
+      work. Without it the XAML compiler never writes the intermediate
+      assembly, Pass2 sees no LocalAssembly, and exits 1 with no diagnostic at
+      all (surfacing only as the MSB3073 "exited with code 1" error). Every
+      .g.cs then comes out empty, so the app loses both its x:Name fields and
+      its generated entry point.
+    -->
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250108002" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.7.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <!--
+      DPAPI, used to encrypt saved account secrets against the current Windows
+      user. Ships out of band on .NET 8 rather than in the shared framework.
+    -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Launcher.Core\Launcher.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\authorization-server.json" Condition="Exists('..\..\authorization-server.json')">
+      <Link>authorization-server.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Manifest Include="$(ApplicationManifest)" />
+    <EmbeddedResource Include="..\..\server\auth\97launch-auth-ca.pem" LogicalName="Launcher.AuthorizationRoot.pem" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\AppIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\AppIcon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\Welcome\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\Servers\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\SkinViewer\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\**\*.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!--
+      Vanilla block textures used as per-loader instance icons. Copied to the
+      output so the unpackaged build can reach them beside the exe.
+    -->
+    <Content Include="Assets\Blocks\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!--
+      Default skin heads. Cropped from the full vanilla skins beside them, and used
+      as the avatar for an account that has no skin of its own, plus for the signed
+      out chip so it is never an empty outline.
+    -->
+    <Content Include="Assets\Skins\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

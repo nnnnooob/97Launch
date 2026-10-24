@@ -1,0 +1,630 @@
+﻿<Page
+    x:Class="Launcher.App.Views.SettingsPage"
+    NavigationCacheMode="Required"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Launcher.App.Controls"
+    xmlns:views="using:Launcher.App.Views">
+
+    <Page.Resources>
+        <!--
+          One settings row: label on the left, control on the right. Every option
+          on this page uses it so the two columns of labels line up down the whole
+          page instead of drifting per card.
+        -->
+        <Style x:Key="SettingRowStyle" TargetType="Grid">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="ColumnSpacing" Value="16" />
+        </Style>
+
+        <Style x:Key="SettingLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+    </Page.Resources>
+
+    <Grid Padding="24,20,24,16" ColumnSpacing="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ============ left rail ============ -->
+        <Border Style="{ThemeResource FolderRailStyle}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <TextBlock
+                        Style="{ThemeResource SidebarHeaderStyle}"
+                        Text="游戏" />
+
+                    <controls:SidebarList
+                        x:Name="GameSectionList"
+                        Margin="0,0,0,4"
+                        SelectionChanged="GameSectionList_SelectionChanged"
+                        SelectionMode="Single">
+                        <ListViewItem Tag="launch" IsSelected="True">
+                        <controls:SidebarItem Title="启动" Icon="{StaticResource IconRocket}" />
+                    </ListViewItem>
+
+                        <ListViewItem Tag="java">
+                        <controls:SidebarItem Title="Java" Icon="{StaticResource IconChip}" />
+                    </ListViewItem>
+
+                        <ListViewItem Tag="manage">
+                        <controls:SidebarItem Title="管理" Icon="{StaticResource IconSliders}" />
+                    </ListViewItem>
+                        <ListViewItem Tag="gameDefaults">
+                            <controls:SidebarItem Title="默认游戏设置" Icon="{StaticResource IconGame}" />
+                        </ListViewItem>
+                    </controls:SidebarList>
+
+                    <TextBlock
+                        Style="{ThemeResource SidebarHeaderStyle}"
+                        Text="关于" />
+
+                    <controls:SidebarList
+                        x:Name="AboutSectionList"
+                        Margin="0,0,0,12"
+                        SelectionChanged="AboutSectionList_SelectionChanged"
+                        SelectionMode="Single">
+                        <ListViewItem Tag="about">
+                        <controls:SidebarItem Title="软件信息" Icon="{StaticResource IconInfo}" />
+                    </ListViewItem>
+
+                        <ListViewItem Tag="update">
+                        <controls:SidebarItem Title="软件更新" Icon="{StaticResource IconUpdate}" />
+                    </ListViewItem>
+                    </controls:SidebarList>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ============ right side ============ -->
+        <Grid Grid.Column="1">
+
+            <!-- ======== 启动 ======== -->
+            <ScrollViewer Visibility="{x:Bind ViewModel.IsLaunch, Mode=OneWay}">
+                <StackPanel Spacing="14">
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="启动选项" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="版本隔离" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.VersionIsolations}"
+                                    SelectedItem="{x:Bind ViewModel.VersionIsolation, Mode=TwoWay}"
+                                    ToolTipService.ToolTip="安装新版本时按此策略自动设置隔离；已有版本请到实例设置中调整" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="游戏窗口标题" />
+                                <TextBox
+                                    Grid.Column="1"
+                                    PlaceholderText="留空则使用默认标题"
+                                    Text="{x:Bind ViewModel.WindowTitle, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="进程优先级" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.ProcessPriorities}"
+                                    SelectedItem="{x:Bind ViewModel.ProcessPriority, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="窗口大小" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <ComboBox
+                                        MinWidth="140"
+                                        ItemsSource="{x:Bind ViewModel.WindowSizes}"
+                                        SelectedItem="{x:Bind ViewModel.WindowSize, Mode=TwoWay}" />
+                                    <TextBox
+                                        Width="76"
+                                        HorizontalContentAlignment="Right"
+                                        Visibility="{x:Bind ViewModel.IsCustomWindowSize, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.WindowWidth, Mode=TwoWay}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Visibility="{x:Bind ViewModel.IsCustomWindowSize, Mode=OneWay}"
+                                        Text="×" />
+                                    <TextBox
+                                        Width="76"
+                                        HorizontalContentAlignment="Right"
+                                        Visibility="{x:Bind ViewModel.IsCustomWindowSize, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.WindowHeight, Mode=TwoWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="IP 协议偏好" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.IpPreferences}"
+                                    SelectedItem="{x:Bind ViewModel.IpPreference, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="游戏内存" />
+
+                            <RadioButton
+                                x:Name="AutoMemoryRadio"
+                                Checked="MemoryMode_Checked"
+                                Content="{x:Bind ViewModel.AutoMemoryDisplay, Mode=OneWay}"
+                                IsChecked="{x:Bind ViewModel.IsAutoMemory, Mode=TwoWay}" />
+
+                            <TextBlock Text="{x:Bind ViewModel.MemoryHint, Mode=OneWay}"
+                                       Style="{ThemeResource SettingHintStyle}" TextWrapping="Wrap" Margin="0,4,0,8" />
+
+                            <RadioButton
+                                x:Name="CustomMemoryRadio"
+                                Margin="0,4,0,10"
+                                Checked="MemoryMode_Checked"
+                                Content="自定义" />
+
+                            <Slider
+                                Maximum="{x:Bind ViewModel.MaxMemoryGb, Mode=OneWay}"
+                                Minimum="0.5"
+                                StepFrequency="0.5"
+                                Value="{x:Bind ViewModel.CustomMemoryGb, Mode=TwoWay}"
+                                IsEnabled="{x:Bind ViewModel.IsCustomMemory, Mode=OneWay}" />
+
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                Style="{ThemeResource SettingHintStyle}"
+                                Text="{x:Bind ViewModel.CustomMemoryDisplay, Mode=OneWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="高级启动选项" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="JVM 参数头部" />
+                                <TextBox
+                                    Grid.Column="1"
+                                    Text="{x:Bind ViewModel.JvmArgsHead, Mode=TwoWay}"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="游戏参数尾部" />
+                                <TextBox
+                                    Grid.Column="1"
+                                    PlaceholderText="例如 --demo"
+                                    Text="{x:Bind ViewModel.GameArgsTail, Mode=TwoWay}"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="启动前执行命令" />
+                                <TextBox
+                                    Grid.Column="1"
+                                    PlaceholderText="留空则不执行"
+                                    Text="{x:Bind ViewModel.PreLaunchCommand, Mode=TwoWay}"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+
+                            <CheckBox
+                                IsChecked="{x:Bind ViewModel.RequireHighPerformanceGpu, Mode=TwoWay}"
+                                Content="要求 Java 使用高性能显卡" />
+
+                            <CheckBox
+                                IsChecked="{x:Bind ViewModel.UseJavaExe, Mode=TwoWay}"
+                                Content="使用 java.exe 而不是 javaw.exe" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ======== Java ======== -->
+            <views:DefaultGameSettingsPanel Visibility="{x:Bind ViewModel.IsGameDefaults, Mode=OneWay}" />
+            <Grid MaxWidth="1080" HorizontalAlignment="Stretch" Visibility="{x:Bind ViewModel.IsJava, Mode=OneWay}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Java 运行环境" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="启动时自动匹配兼容版本；需要固定 Java 时，请在实例设置中指定。"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <CommandBar Grid.Row="1" Margin="0,12,0,10" Background="Transparent"
+                            DefaultLabelPosition="Right" IsOpen="False" OverflowButtonVisibility="Auto">
+                    <CommandBar.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsJavaBusy, Mode=OneWay}"
+                                          Visibility="{x:Bind ViewModel.IsJavaBusy, Mode=OneWay}" />
+                            <TextBlock Text="{x:Bind ViewModel.JavaStatus, Mode=OneWay}" FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"
+                                       MaxWidth="270" TextTrimming="CharacterEllipsis"
+                                       ToolTipService.ToolTip="{x:Bind ViewModel.JavaStatus, Mode=OneWay}" />
+                        </StackPanel>
+                    </CommandBar.Content>
+                    <AppBarButton Label="重新搜索" Icon="Refresh" Click="RefreshJava_Click"
+                                  IsEnabled="{x:Bind ViewModel.CanManageJava, Mode=OneWay}" />
+                    <AppBarButton x:Name="AddJavaButton" Label="手动添加" Icon="Add" Click="AddJava_Click"
+                                  IsEnabled="{x:Bind ViewModel.CanManageJava, Mode=OneWay}" />
+                </CommandBar>
+
+                <ListView
+                    x:Name="JavaList"
+                    Grid.Row="2"
+                    Margin="0,0,0,10"
+                    ItemsSource="{x:Bind ViewModel.JavaRuntimes}"
+                    SelectedItem="{x:Bind ViewModel.SelectedJava, Mode=TwoWay}"
+                    SelectionMode="Single" IsEnabled="{x:Bind ViewModel.CanManageJava, Mode=OneWay}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,0,0,6" />
+                            <Setter Property="CornerRadius" Value="10" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="14,12" ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Width="42" Height="42" VerticalAlignment="Center"
+                                        Background="{ThemeResource ControlFillColorSecondaryBrush}" CornerRadius="10">
+                                    <Viewbox Width="22" Height="22" Stretch="Uniform">
+                                        <Path Data="{StaticResource IconChip}" Style="{ThemeResource LineIconStyle}" />
+                                    </Viewbox>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding MetadataText}" FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding DirectoryPath}" FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis"
+                                               ToolTipService.ToolTip="{Binding Path}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12"
+                            Visibility="{x:Bind ViewModel.ShowJavaEmpty, Mode=OneWay}" IsHitTestVisible="False">
+                    <FontIcon Glyph="&#xE950;" FontSize="32" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="暂无可用的 Java" FontSize="17" HorizontalAlignment="Center" />
+                    <TextBlock Text="重新搜索，或手动添加已安装的 java.exe。"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Grid.Row="3" Padding="16,14,16,6" CornerRadius="12"
+                        BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Visibility="{x:Bind ViewModel.HasSelectedJava, Mode=OneWay}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{x:Bind ViewModel.SelectedJavaName, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="{x:Bind ViewModel.SelectedJavaMetadata, Mode=OneWay}"
+                                   FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="可执行文件" FontSize="12" Margin="0,6,0,0"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.SelectedJavaExecutable, Mode=OneWay}"
+                                   FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <CommandBar Background="Transparent" DefaultLabelPosition="Right" IsOpen="False"
+                                    OverflowButtonVisibility="Auto">
+                            <AppBarButton Label="打开目录" Icon="OpenFile" Click="OpenJavaFolder_Click"
+                                          IsEnabled="{x:Bind ViewModel.CanManageJava, Mode=OneWay}" />
+                            <AppBarButton Label="复制路径" Icon="Copy" Click="CopyJavaPath_Click"
+                                          IsEnabled="{x:Bind ViewModel.CanManageJava, Mode=OneWay}" />
+                            <CommandBar.SecondaryCommands>
+                                <AppBarButton Label="移除手动记录" Icon="Delete" Click="RemoveJava_Click"
+                                              IsEnabled="{x:Bind ViewModel.CanRemoveSelectedJava, Mode=OneWay}"
+                                              ToolTipService.ToolTip="仅移除手动添加记录，不删除 Java 文件；自动发现的运行环境仍会显示。" />
+                            </CommandBar.SecondaryCommands>
+                        </CommandBar>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ======== 管理 ======== -->
+            <ScrollViewer Visibility="{x:Bind ViewModel.IsManage, Mode=OneWay}">
+                <StackPanel Spacing="14">
+                    <views:LauncherAuthorizationPanel />
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="游戏资源获取偏好" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="文件下载源" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.FileSources}"
+                                    SelectedItem="{x:Bind ViewModel.FileDownloadSource, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="版本下载源" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.VersionSources}"
+                                    SelectedItem="{x:Bind ViewModel.VersionDownloadSource, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="最大线程数" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                                    <Slider
+                                        Width="240"
+                                        Maximum="256"
+                                        Minimum="1"
+                                        StepFrequency="1"
+                                        Value="{x:Bind ViewModel.MaxThreads, Mode=TwoWay}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Text="{x:Bind ViewModel.MaxThreads, Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="速度限制" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                                    <Slider
+                                        Width="240"
+                                        Maximum="20480"
+                                        Minimum="0"
+                                        StepFrequency="128"
+                                        Value="{x:Bind ViewModel.SpeedLimitKb, Mode=TwoWay}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Text="{x:Bind ViewModel.SpeedLimitText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <CheckBox
+                                IsChecked="{x:Bind ViewModel.SelectNewInstance, Mode=TwoWay}"
+                                Content="安装新实例后自动选定该实例" />
+
+                            <CheckBox
+                                IsChecked="{x:Bind ViewModel.UpgradeAuthlib, Mode=TwoWay}"
+                                Content="升级部分版本的 Authlib" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="社区资源获取偏好" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="下载源" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.CommunitySources}"
+                                    SelectedItem="{x:Bind ViewModel.CommunitySource, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="文件名格式" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{x:Bind ViewModel.FileNameFormats}"
+                                    SelectedItem="{x:Bind ViewModel.FileNameFormat, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="辅助功能" />
+                            <CheckBox
+                                IsChecked="{x:Bind ViewModel.AutoSetChinese, Mode=TwoWay}"
+                                Content="自动设置为中文" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ======== 软件信息 ======== -->
+            <ScrollViewer Visibility="{x:Bind ViewModel.IsAbout, Mode=OneWay}">
+                <StackPanel Spacing="14">
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="97Launch" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="版本" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Text="{x:Bind ViewModel.VersionDisplay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="数据目录" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Text="{x:Bind ViewModel.DataDirectory}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="日志目录" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Text="{x:Bind ViewModel.LogDirectory}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="运行环境" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Text=".NET 8 · WinUI 3 · Windows App SDK 1.6" />
+                            </Grid>
+
+                            <StackPanel Margin="0,4,0,0" Orientation="Horizontal" Spacing="8">
+                                <Button Click="OpenDataFolder_Click" Content="打开数据目录" />
+                                <Button Click="OpenLogFolder_Click" Content="打开日志目录" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ======== 软件更新 ======== -->
+            <ScrollViewer Visibility="{x:Bind ViewModel.IsUpdate, Mode=OneWay}">
+                <StackPanel Spacing="14">
+                    <Border Style="{ThemeResource PlaceholderCardStyle}">
+                        <StackPanel>
+                            <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="软件更新" />
+
+                            <TextBlock
+                                Margin="0,0,0,12"
+                                Style="{ThemeResource SettingHintStyle}"
+                                Text="当前版本为开发版，更新通道尚未接好。" />
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="当前版本" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Text="{x:Bind ViewModel.VersionDisplay}" />
+                            </Grid>
+
+                            <Grid Style="{ThemeResource SettingRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{ThemeResource SettingLabelStyle}" Text="更新通道" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    SelectedIndex="1">
+                                    <ComboBoxItem Content="稳定版" />
+                                    <ComboBoxItem Content="开发版" />
+                                </ComboBox>
+                            </Grid>
+
+                            <CheckBox IsChecked="True" Content="启动时检查更新" />
+
+                            <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="8">
+                                <Button Click="CheckUpdate_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Viewbox Width="14" Height="14" VerticalAlignment="Center" Stretch="Uniform">
+                                            <Path Data="{StaticResource IconUpdate}" Style="{ThemeResource LineIconStyle}" />
+                                        </Viewbox>
+                                        <TextBlock Text="检查更新" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Page>

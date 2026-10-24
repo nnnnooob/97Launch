@@ -1,0 +1,55 @@
+<UserControl x:Class="Launcher.App.Views.InstanceExportPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="20,18,20,16" RowSpacing="10">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Spacing="5"><TextBlock Text="导出整合包" FontSize="22" FontWeight="SemiBold"/>
+            <TextBlock x:Name="InstanceLabel" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/></StackPanel>
+        <ScrollViewer x:Name="OptionsPanel" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14" Padding="0,0,10,12">
+                <TextBox x:Name="PackName" Header="整合包名称"/>
+                <TextBox x:Name="PackVersion" Header="整合包版本" Text="1.0.0"/>
+                <TextBox x:Name="PackSummary" Header="说明" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"/>
+                <TextBlock Text="导出内容" FontSize="15" FontWeight="SemiBold"/>
+                <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <CheckBox x:Name="Mods" Content="Mod" IsChecked="True"/>
+                        <CheckBox x:Name="DisabledMods" Content="已禁用的 Mod"/>
+                        <CheckBox x:Name="GameOptions" Content="游戏设置" IsChecked="True"/>
+                        <CheckBox x:Name="Configs" Content="Mod 配置" IsChecked="True"/>
+                        <CheckBox x:Name="Scripts" Content="脚本与整合包数据" IsChecked="True"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <CheckBox x:Name="ResourcePacks" Content="资源包" IsChecked="True"/>
+                        <CheckBox x:Name="ShaderPacks" Content="光影包" IsChecked="True"/>
+                        <CheckBox x:Name="Saves" Content="单人存档"/>
+                        <CheckBox x:Name="Screenshots" Content="截图"/>
+                        <CheckBox x:Name="Servers" Content="服务器列表"/>
+                    </StackPanel>
+                </Grid>
+                <CheckBox x:Name="Personal" Content="命令历史与快捷栏"/>
+                <Expander Header="高级选项" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <StackPanel Spacing="10">
+                        <CheckBox x:Name="DirectFiles" Content="直接打包资源文件，导入时无需重新下载" Checked="DirectFiles_Changed" Unchecked="DirectFiles_Changed"/>
+                        <CheckBox x:Name="OnlyModrinth" Content="仅使用 Modrinth 托管的资源"/>
+                        <CheckBox x:Name="IncludeLauncher" Content="携带当前 97Launch 程序（导出为 ZIP）"/>
+                        <CheckBox x:Name="IncludeJava" Content="携带 Java" Checked="Java_Changed" Unchecked="Java_Changed"/>
+                        <Button x:Name="ChooseJava" Content="选择 Java 文件夹" Click="ChooseJava_Click" IsEnabled="False"/>
+                        <TextBlock x:Name="JavaPathLabel" FontSize="12" TextWrapping="Wrap"/>
+                        <TextBox x:Name="Rules" Header="追加导出规则" PlaceholderText="每行一条，例如 config/*；排除项以 ! 开头" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="读取配置" Click="ReadConfig_Click"/><Button Content="保存配置" Click="SaveConfig_Click"/></StackPanel>
+                    </StackPanel>
+                </Expander>
+                <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                           Text="账号凭据、日志、缓存和崩溃报告不会导出。公开分享前，请检查所选内容和资源的分发许可。"/>
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="2" Spacing="8">
+            <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button x:Name="StartButton" Content="开始导出" Click="Start_Click" Style="{ThemeResource AccentButtonStyle}"/>
+            </StackPanel>
+            <TextBlock Text="任务将加入传输队列，并跳转到传输页面。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

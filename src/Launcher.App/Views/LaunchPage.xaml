@@ -1,0 +1,264 @@
+<Page
+    x:Class="Launcher.App.Views.LaunchPage"
+    NavigationCacheMode="Required"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Launcher.App.Controls"
+    xmlns:views="using:Launcher.App.Views">
+
+    <Grid x:Name="PageContent" Background="{ThemeResource LaunchCanvasBrush}" Padding="24,24,24,16" ColumnSpacing="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="280" />
+        </Grid.ColumnDefinitions>
+        <ScrollViewer x:Name="LaunchScroll" Grid.Column="0"
+                      HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled"
+                      VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+            <StackPanel x:Name="LaunchContent" Margin="0,0,12,0">
+
+                <!-- status hero -->
+                <Border
+                    Background="{StaticResource StatusHeroBrush}"
+                    Style="{ThemeResource StatusHeroCardStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!--
+                              The instance's block icon on a translucent plate,
+                              scaled with nearest-neighbour so the 16x16 vanilla
+                              texture keeps its hard pixel edges.
+                            -->
+                            <Border
+                                x:Name="InstanceIconFrame"
+                                Width="52"
+                                Height="52"
+                                VerticalAlignment="Center"
+                                Background="#33FFFFFF"
+                                BorderBrush="#66FFFFFF"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <Image
+                                    Width="34"
+                                    Height="34"
+                                    Source="{x:Bind ViewModel.InstanceIconPath, Mode=OneWay}"
+                                    Stretch="Uniform" />
+                            </Border>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Margin="14,0,0,0"
+                                VerticalAlignment="Center"
+                                Spacing="2">
+                                <!-- readiness + instance name -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Border
+                                        x:Name="ReadinessDot"
+                                        Style="{ThemeResource ReadinessDotStyle}" />
+                                    <TextBlock
+                                        Style="{ThemeResource HeroSubtitleTextStyle}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.JavaHint, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.ReadinessDisplay, Mode=OneWay}" />
+                                </StackPanel>
+
+                                <TextBlock
+                                    Style="{ThemeResource HeroTitleTextStyle}"
+                                    Text="{x:Bind ViewModel.InstanceName, Mode=OneWay}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- metadata bubbles, bottom-left of the card -->
+                        <StackPanel
+                            Margin="0,11,0,0"
+                            Orientation="Horizontal"
+                            Spacing="6">
+                            <Border Style="{ThemeResource HeroChipStyle}">
+                                <TextBlock
+                                    Style="{ThemeResource HeroChipTextStyle}"
+                                    Text="{x:Bind ViewModel.GameVersion, Mode=OneWay}" />
+                            </Border>
+
+                            <Border Style="{ThemeResource HeroChipStyle}">
+                                <TextBlock
+                                    Style="{ThemeResource HeroChipTextStyle}"
+                                    Text="{x:Bind ViewModel.LoaderDisplay, Mode=OneWay}" />
+                            </Border>
+
+                            <Border Style="{ThemeResource HeroChipStyle}" ToolTipService.ToolTip="{x:Bind ViewModel.JavaHint, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <Viewbox Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center">
+                                        <Path
+                                            Data="{StaticResource IconCoffee}"
+                                            Style="{ThemeResource LineIconStyle}"
+                                            Stroke="White" />
+                                    </Viewbox>
+                                    <TextBlock
+                                        Style="{ThemeResource HeroChipTextStyle}"
+                                        Text="{x:Bind ViewModel.JavaVersion, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{ThemeResource HeroChipStyle}">
+                                <TextBlock
+                                    Style="{ThemeResource HeroChipTextStyle}"
+                                    Text="{x:Bind ViewModel.IsolationDisplay, Mode=OneWay}" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- launch action -->
+                <Grid Margin="0,14,0,0" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <controls:LaunchActionButton
+                        x:Name="LaunchButton"
+                        Height="52"
+                        Grid.Column="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Style="{ThemeResource LaunchButtonStyle}"
+                        IsEnabled="{x:Bind ViewModel.CanLaunch, Mode=OneWay}"
+                        IsLaunching="{x:Bind ViewModel.IsLaunching, Mode=OneWay}"
+                        Click="LaunchButton_Click"
+                        Content="{x:Bind ViewModel.LaunchButtonText, Mode=OneWay}"
+                        ToolTipService.ToolTip="启动所选实例">
+                    </controls:LaunchActionButton>
+
+                    <!--
+                      Instance settings: a secondary action, so it is visibly
+                      smaller and drawn in the neutral control style instead of
+                      the brand-green primary.
+                    -->
+                    <Button
+                        x:Name="InstanceSettingsButton"
+                        Grid.Column="1"
+                        Width="52"
+                        Height="52"
+                        CornerRadius="12"
+                        Style="{ThemeResource SecondaryActionButtonStyle}"
+                        Click="InstanceSettings_Click"
+                        ToolTipService.ToolTip="实例设置">
+                        <Viewbox Width="16" Height="16" Stretch="Uniform">
+                            <Path Data="{StaticResource IconSettings}" Style="{ThemeResource LineIconStyle}" />
+                        </Viewbox>
+                    </Button>
+                </Grid>
+
+                <Border Margin="0,14,0,0" Padding="12,10" Style="{ThemeResource PlaceholderCardStyle}">
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <TextBlock Text="当前游戏" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button HorizontalAlignment="Right" Content="全部关闭"
+                                    Visibility="{x:Bind ViewModel.StopAllVisibility, Mode=OneWay}"
+                                    Click="StopAllGames_Click" />
+                        </Grid>
+                        <TextBlock Text="当前无实例运行" HorizontalAlignment="Center" Margin="0,8"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="{x:Bind ViewModel.EmptyGamesVisibility, Mode=OneWay}" />
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.GameSessions, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10" Margin="0,0,0,8" CornerRadius="8"
+                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="36" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Image Width="30" Height="30" Source="{Binding IconPath}" Stretch="Uniform" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Spacing="3">
+                                                <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding GameVersion}" FontSize="11"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                <ProgressBar Height="3" Maximum="100" Value="{Binding ProgressValue}"
+                                                             IsIndeterminate="{Binding IsProgressIndeterminate}"
+                                                             Visibility="{Binding ProgressVisibility}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" VerticalAlignment="Center"
+                                                    Style="{ThemeResource GameSessionActionButtonStyle}"
+                                                    Tag="{Binding Id}" Click="StopGame_Click"
+                                                    PointerEntered="GameAction_PointerEntered"
+                                                    PointerExited="GameAction_PointerExited"
+                                                    ToolTipService.ToolTip="{Binding ActionTooltip}">
+                                                <FontIcon Glyph="{Binding ActionGlyph}" FontSize="14" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- summary metrics -->
+                <Grid Margin="0,14,0,0" ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{ThemeResource MetricCardStyle}" Padding="12,10">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                Style="{ThemeResource MetricValueTextStyle}"
+                                Text="{x:Bind ViewModel.InstalledInstanceCount, Mode=OneWay}" />
+                            <TextBlock
+                                Style="{ThemeResource MetricLabelTextStyle}"
+                                Text="已安装实例" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{ThemeResource MetricCardStyle}" Padding="12,10">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                Style="{ThemeResource MetricValueTextStyle}"
+                                Text="{x:Bind ViewModel.AccountCount, Mode=OneWay}" />
+                            <TextBlock
+                                Style="{ThemeResource MetricLabelTextStyle}"
+                                Text="已有账号" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{ThemeResource MetricCardStyle}" Padding="12,10">
+                        <StackPanel Spacing="2">
+                            <!--
+                              Time is text, not a number: it is either a
+                              humanised age ("3 天前") or "从未启动".
+                            -->
+                            <TextBlock
+                                Style="{ThemeResource MetricValueTextStyle}"
+                                FontSize="16"
+                                  ToolTipService.ToolTip="{x:Bind ViewModel.LastPlayedHint, Mode=OneWay}"
+                                Text="{x:Bind ViewModel.LastPlayedDisplay, Mode=OneWay}" />
+                            <TextBlock
+                                Style="{ThemeResource MetricLabelTextStyle}"
+                                Text="上次游玩" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <views:ServerCatalogPanel x:Name="ServerPanel" Margin="0,20,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Column="1" RowSpacing="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" MinHeight="230" MaxHeight="360" />
+                <RowDefinition Height="3*" MinHeight="180" />
+            </Grid.RowDefinitions>
+            <controls:SkinModelView x:Name="SkinModel" />
+            <views:LaunchHistoryPanel Grid.Row="1" />
+        </Grid>
+    </Grid>
+</Page>

@@ -1,0 +1,34 @@
+<Project>
+
+  <!--
+    Shared across every project. Platform-specific settings such as
+    TargetFramework deliberately live in each .csproj, because the WinUI
+    projects need a windows-specific TFM that the plain class libraries must
+    not inherit.
+  -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha.1</VersionSuffix>
+    <BuildNumber Condition="'$(BuildNumber)' == ''">0</BuildNumber>
+    <Version>$(VersionPrefix)</Version>
+    <Version Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</Version>
+    <!-- Published builds receive a monotonically increasing BuildNumber. -->
+    <PreReleaseSuffix Condition="'$(Configuration)' != 'Release'">-dev</PreReleaseSuffix>
+    <PreReleaseSuffix Condition="'$(Configuration)' == 'Release'"></PreReleaseSuffix>
+    <InformationalVersion>$(Version)$(PreReleaseSuffix)+build.$(BuildNumber)</InformationalVersion>
+    <Product>97Launch</Product>
+    <Company>97Launch</Company>
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).$(BuildNumber)</FileVersion>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="BuildNumber" Value="$(BuildNumber)" />
+  </ItemGroup>
+
+</Project>

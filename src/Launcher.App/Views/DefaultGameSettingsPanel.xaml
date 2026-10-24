@@ -1,0 +1,83 @@
+<UserControl x:Class="Launcher.App.Views.DefaultGameSettingsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="PresetLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style x:Key="PresetKeyStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="148" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="ToolTipService.ToolTip" Value="点击后按下键盘或鼠标按键" />
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="1000" Spacing="16" Padding="0,0,12,20">
+            <StackPanel Spacing="6">
+                <TextBlock Text="默认游戏设置" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="为新实例准备熟悉的画面与操作习惯。" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <Border Padding="20,16" CornerRadius="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch x:Name="EnabledToggle" Header="新实例首次启动时应用默认游戏设置" Toggled="Enabled_Toggled" />
+                    <TextBlock Text="仅在首次启动前应用一次，之后在游戏中修改不会被覆盖。已有实例保持原设置。"
+                               FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+            <StackPanel x:Name="OptionsPanel" Spacing="16">
+                <Border Padding="20" CornerRadius="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Spacing="18">
+                        <TextBlock Text="画面与鼠标" FontSize="16" FontWeight="SemiBold" />
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="视野（°）" Style="{StaticResource PresetLabelStyle}" />
+                            <Slider x:Name="FovSlider" Grid.Column="1" Minimum="30" Maximum="110" Value="70" StepFrequency="1" ValueChanged="Value_Changed" AutomationProperties.Name="视野" />
+                            <NumberBox x:Name="FovNumber" Grid.Column="2" Minimum="30" Maximum="110" SmallChange="1" SpinButtonPlacementMode="Compact" Value="{Binding Value, ElementName=FovSlider, Mode=TwoWay}" AutomationProperties.Name="视野度数" />
+                        </Grid>
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="亮度（%）" Style="{StaticResource PresetLabelStyle}" />
+                            <Slider x:Name="BrightnessSlider" Grid.Column="1" Minimum="0" Maximum="100" Value="50" StepFrequency="1" ValueChanged="Value_Changed" AutomationProperties.Name="亮度" />
+                            <NumberBox x:Name="BrightnessNumber" Grid.Column="2" Minimum="0" Maximum="100" SmallChange="1" SpinButtonPlacementMode="Compact" Value="{Binding Value, ElementName=BrightnessSlider, Mode=TwoWay}" AutomationProperties.Name="亮度百分比" />
+                        </Grid>
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="渲染距离（区块）" Style="{StaticResource PresetLabelStyle}" />
+                            <Slider x:Name="DistanceSlider" Grid.Column="1" Minimum="2" Maximum="32" Value="12" StepFrequency="1" ValueChanged="Value_Changed" AutomationProperties.Name="渲染距离" />
+                            <NumberBox x:Name="DistanceNumber" Grid.Column="2" Minimum="2" Maximum="32" SmallChange="1" SpinButtonPlacementMode="Compact" Value="{Binding Value, ElementName=DistanceSlider, Mode=TwoWay}" AutomationProperties.Name="渲染区块数" />
+                        </Grid>
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="鼠标灵敏度（%）" Style="{StaticResource PresetLabelStyle}" />
+                            <Slider x:Name="SensitivitySlider" Grid.Column="1" Minimum="0" Maximum="200" Value="100" StepFrequency="1" ValueChanged="Value_Changed" AutomationProperties.Name="鼠标灵敏度" />
+                            <NumberBox x:Name="SensitivityNumber" Grid.Column="2" Minimum="0" Maximum="200" SmallChange="1" SpinButtonPlacementMode="Compact" Value="{Binding Value, ElementName=SensitivitySlider, Mode=TwoWay}" AutomationProperties.Name="鼠标灵敏度百分比" />
+                        </Grid>
+                        <TextBlock Text="渲染距离越高，游戏所需的内存和图形性能通常也越高。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Padding="20" CornerRadius="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="按键" FontSize="16" FontWeight="SemiBold" />
+                        <Grid><TextBlock Text="疾跑" Style="{StaticResource PresetLabelStyle}" /><Button x:Name="SprintButton" Tag="sprint" Style="{StaticResource PresetKeyStyle}" Click="CaptureKey_Click" AutomationProperties.Name="设置疾跑按键" /></Grid>
+                        <Grid><TextBlock Text="潜行" Style="{StaticResource PresetLabelStyle}" /><Button x:Name="SneakButton" Tag="sneak" Style="{StaticResource PresetKeyStyle}" Click="CaptureKey_Click" AutomationProperties.Name="设置潜行按键" /></Grid>
+                        <Grid><TextBlock Text="切换视角" Style="{StaticResource PresetLabelStyle}" /><Button x:Name="PerspectiveButton" Tag="perspective" Style="{StaticResource PresetKeyStyle}" Click="CaptureKey_Click" AutomationProperties.Name="设置切换视角按键" /></Grid>
+                        <TextBlock Text="点击键帽后按下单个按键，支持左右修饰键和鼠标侧键；Esc 取消。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="ConflictHint" Text="这些操作使用了相同按键，进入游戏后可能同时触发。" Visibility="Collapsed" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <CommandBar Background="Transparent" DefaultLabelPosition="Right" HorizontalAlignment="Left" IsOpen="False">
+                <AppBarButton x:Name="ReadButton" Icon="OpenFile" Label="从实例读取" Click="ReadInstance_Click" />
+                <AppBarButton Icon="Refresh" Label="恢复默认值" Click="Reset_Click" />
+            </CommandBar>
+            <TextBlock Text="设置自动保存。更改预设只影响尚未首次启动的新装实例。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="适用于 Minecraft 1.7.2 及更新版本，旧版本的渲染距离按支持范围调整。" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

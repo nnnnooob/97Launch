@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>97Launch · 管理控制台</title>
+  <link rel="icon" href="/static/app-icon.png">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/catalog.css">
+  <script src="/static/app.js" defer></script>
+  <script src="/static/catalog.js" defer></script>
+</head>
+<body>
+  <section id="login" class="login-stage">
+    <div class="login-brand"><img src="/static/app-icon.png" alt=""><span>97Launch</span></div>
+    <form id="login-form" class="login-panel">
+      <div class="connection-art" aria-hidden="true"><span class="node">QQ</span><span class="link"></span><span class="node lightning">ϟ</span></div>
+      <h1>每次配对，都有迹可循。</h1>
+      <p>查看群内配对记录，管理启动器的设备授权。</p>
+      <label for="admin-key">管理密钥</label>
+      <input id="admin-key" type="password" autocomplete="off" spellcheck="false" required minlength="20" placeholder="输入部署时生成的管理密钥">
+      <button class="primary" type="submit">进入管理页 <span aria-hidden="true">↗</span></button>
+      <p id="login-error" role="alert" class="error-text"></p>
+      <small>密钥只用于管理此服务，无需创建账号。</small>
+    </form>
+    <footer>97Launch 授权服务 <span>设备配对 · 独立于 Minecraft 账号</span></footer>
+  </section>
+
+  <div id="app" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/"><img src="/static/app-icon.png" alt=""><div>97Launch<small>管理控制台</small></div></a>
+      <nav aria-label="管理导航">
+        <button class="nav" data-view="servers"><svg><use href="#server-icon"/></svg>服务器</button>
+        <button class="nav" data-view="packs"><svg><use href="#pack-icon"/></svg>整合包</button>
+        <button class="nav" data-view="traffic"><svg><use href="#traffic-icon"/></svg>带宽与连接</button>
+        <span class="nav-divider"></span>
+        <button class="nav active" data-view="devices"><svg><use href="#device-icon"/></svg>已授权设备</button>
+        <button class="nav" data-view="codes"><svg><use href="#pair-icon"/></svg>配对记录</button>
+        <button class="nav" data-view="audit"><svg><use href="#log-icon"/></svg>操作记录</button>
+        <button class="nav" data-view="settings"><svg><use href="#settings-icon"/></svg>接入设置</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="service-state"><i></i>授权服务运行中</span><button id="logout" class="quiet">退出管理</button></div>
+    </aside>
+    <main>
+      <header class="page-header"><div><p class="breadcrumb">控制台 <span>/</span> <span id="breadcrumb">设备</span></p><h1 id="page-title">已授权设备</h1><p id="page-description">查看已配对的启动器。撤销后，设备下次联网校验将无法通过。</p></div><button id="refresh" class="secondary"><svg><use href="#refresh-icon"/></svg>刷新</button></header>
+      <div id="load-error" class="banner" role="alert" hidden></div>
+      <section class="metrics" aria-label="服务概况">
+        <div><span>有效设备</span><strong id="metric-devices">—</strong></div>
+        <div><span>已授权 QQ</span><strong id="metric-users">—</strong></div>
+        <div><span>待兑换配对 Token</span><strong id="metric-pending">—</strong></div>
+        <div><span>今日完成配对</span><strong id="metric-today">—</strong></div>
+      </section>
+      <section id="devices" class="view panel">
+        <div class="table-toolbar"><h2>设备列表 <span id="device-total"></span></h2><form id="search-form"><input id="search" type="search" placeholder="搜索 QQ、昵称或设备名称" aria-label="搜索设备"><button class="secondary" type="submit">搜索</button></form></div>
+        <div class="table-scroll"><table><thead><tr><th>设备</th><th>所属 QQ / 群</th><th>最近连接</th><th>授权状态</th><th><span class="sr-only">操作</span></th></tr></thead><tbody id="devices-body"></tbody></table></div>
+        <div id="devices-empty" class="empty" hidden><svg><use href="#device-icon"/></svg><h3>还没有配对设备</h3><p>先在接入设置中允许群配对，机器人接入后，设备会出现在这里。</p><button class="secondary" data-go-settings>配置接入</button></div>
+        <div class="pagination" data-list="devices"><span></span><button class="quiet" data-page="-1" aria-label="上一页">‹</button><button class="quiet" data-page="1" aria-label="下一页">›</button></div>
+      </section>
+      <section id="codes" class="view panel" hidden>
+        <div class="table-toolbar"><h2>配对记录</h2><button id="open-issue" class="primary" type="button"><svg><use href="#pair-icon"/></svg>获取 Token</button></div>
+        <div class="table-scroll"><table><thead><tr><th>配对 Token / 申请人</th><th>来源群</th><th>申请时间</th><th>状态</th><th><span class="sr-only">操作</span></th></tr></thead><tbody id="codes-body"></tbody></table></div>
+        <div id="codes-empty" class="empty" hidden><svg><use href="#pair-icon"/></svg><h3>暂无配对申请</h3><p>通过机器人申请，或由管理员点击“获取 Token”签发。</p></div>
+        <div class="pagination" data-list="codes"><span></span><button class="quiet" data-page="-1" aria-label="上一页">‹</button><button class="quiet" data-page="1" aria-label="下一页">›</button></div>
+      </section>
+      <section id="audit" class="view panel" hidden>
+        <div class="table-toolbar"><h2>操作记录</h2><span class="muted">保留最近 90 天</span></div>
+        <div class="table-scroll"><table><thead><tr><th>操作</th><th>对象 / 详情</th><th>来源 IP</th><th>时间</th></tr></thead><tbody id="audit-body"></tbody></table></div>
+        <div id="audit-empty" class="empty" hidden><h3>暂无操作记录</h3></div>
+        <div class="pagination" data-list="audit"><span></span><button class="quiet" data-page="-1" aria-label="上一页">‹</button><button class="quiet" data-page="1" aria-label="下一页">›</button></div>
+      </section>
+      <section id="settings" class="view settings-grid" hidden>
+        <form id="policy-form" class="panel settings-panel"><h2>配对权限</h2><p>仅允许指定群申请配对 Token，设备凭据长期有效，直到主动退出或被撤销。</p>
+          <label for="groups">允许的 QQ 群</label><textarea id="groups" rows="3" placeholder="每行一个群号"></textarea><small>留空时不开放配对。最多 100 个群。</small>
+          <label for="users">允许的 QQ <span class="muted">可不填</span></label><textarea id="users" rows="3" placeholder="每行一个 QQ 号"></textarea><small>留空时，允许上述群内的所有成员申请。</small>
+          <label for="max-devices">每个 QQ 的有效设备上限</label><input id="max-devices" type="number" min="1" max="20" value="3" required>
+          <div class="setting-note">修改群或 QQ 白名单会影响新配对。已配对设备需在设备列表中单独撤销。</div>
+          <button class="primary" type="submit">保存权限</button>
+        </form>
+        <div class="panel settings-panel integration"><h2>机器人接入</h2><p>群内申请，Token 私聊发送给申请人；群内只显示发送结果。私聊失败时作废本次 Token。</p><div id="public-access-note" class="banner" hidden>公网接口未启用，请检查服务端接入配置。</div><p id="public-access-ready" class="connection-ready" hidden>公网 HTTPS 已启用 · 远程机器人需使用插件包内的 CA 证书。</p><label>申请配对 Token</label><code id="bot-endpoint"></code><button id="copy-endpoint" class="secondary">复制接口地址</button>
+          <dl><div><dt>请求方式</dt><dd>POST</dd></div><div><dt>身份验证</dt><dd>Bearer 机器人密钥</dd></div><div><dt>配对 Token 有效期</dt><dd>5 分钟，仅可使用一次</dd></div><div><dt>管理会话</dt><dd>8 小时</dd></div></dl>
+          <div class="setting-note">机器人密钥与管理密钥分别保管。不要把机器人密钥放进启动器或群消息。</div>
+          <a class="text-link" href="/api/admin/openapi.json" target="_blank" rel="noopener">查看接口定义</a>
+        </div>
+      </section>
+      <section id="servers" class="view" hidden>
+        <div class="catalog-summary"><div><span>已发布</span><strong id="servers-published">—</strong></div><div><span>Minecraft 实例</span><strong id="servers-found">—</strong></div><div class="summary-connection"><span id="mcsm-summary">正在连接 MCSM</span><small id="mcsm-sync-at"></small></div></div>
+        <div class="catalog-toolbar"><div><h2>服务器目录</h2><p>先配置连接地址，再选择是否向玩家发布。</p></div><div class="toolbar-actions"><button id="mcsm-sync" class="secondary"><svg><use href="#refresh-icon"/></svg>同步 MCSM</button><button class="quiet" data-go-traffic>连接设置</button></div></div>
+        <div id="server-sync-error" class="banner" role="status" hidden></div>
+        <div id="server-list" class="server-list"></div>
+        <div id="servers-empty" class="panel empty" hidden><svg><use href="#server-icon"/></svg><h3>尚未发现 Minecraft 服务器</h3><p>连接 MCSM，并在实例设置中启用 Minecraft Java 状态检测。其他游戏和终端不会出现在这里。</p><button class="secondary" data-go-traffic>配置 MCSM</button></div>
+      </section>
+      <section id="packs" class="view" hidden>
+        <div class="storage-strip panel"><svg><use href="#pack-icon"/></svg><div><strong id="storage-text">正在读取存储空间</strong><progress id="storage-progress" max="1" value="0" aria-label="整合包存储使用量"></progress><small id="storage-detail"></small></div><button id="open-upload" class="primary">上传整合包</button></div>
+        <div id="pending-uploads" class="panel pending-uploads" hidden><h2>待完成上传</h2><div id="pending-upload-list"></div></div>
+        <div id="pack-list" class="pack-list"></div>
+        <div id="packs-empty" class="panel empty" hidden><svg><use href="#pack-icon"/></svg><h3>上传一个客户端整合包</h3><p>支持 CurseForge ZIP 和 Modrinth MRPACK。上传完成后，在服务器配置中关联具体版本。</p><button class="secondary" data-open-upload>选择文件</button></div>
+        <div class="setting-note catalog-note">每次上传生成独立版本和 SHA-256。发布新版本不会覆盖旧文件；归档可恢复，不会中断已取得凭证的下载。</div>
+      </section>
+      <section id="traffic" class="view" hidden>
+        <div class="traffic-grid">
+          <form id="traffic-form" class="panel settings-panel"><h2>文件传输限速</h2><p>同时约束全部下载与上传任务。1 MiB/s ≈ 8.39 Mbps。</p>
+            <div class="form-grid"><label>总下载上限 <span>MiB/s</span><input id="download-total" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>每个 QQ 下载上限 <span>MiB/s</span><input id="download-user" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>总上传上限 <span>MiB/s</span><input id="upload-total" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>单上传任务上限 <span>MiB/s</span><input id="upload-task" type="number" min="0.0625" max="1024" step="0.0625" required></label><label>最多同时下载<input id="download-slots" type="number" min="1" max="32" required></label><label>最多同时上传<input id="upload-slots" type="number" min="1" max="4" required></label><label>单文件上限 <span>GiB</span><input id="file-limit" type="number" min="1" max="32" required></label><label>文件存储配额 <span>GiB</span><input id="storage-limit" type="number" min="1" max="1000" required></label></div>
+            <div class="setting-note">上传使用小分片和反压限速，网络缓冲可能产生短时突发。请给 Minecraft 预留充足带宽；这里只限制本服务的整合包流量。</div><button class="primary" type="submit">保存限速</button><span id="traffic-dirty" class="form-dirty" hidden>有未保存的更改</span>
+          </form>
+          <div class="connection-stack"><form id="mcsm-form" class="panel settings-panel"><div class="section-heading"><h2>MCSManager 连接</h2><span id="mcsm-connection-badge" class="badge">—</span></div><p>只读取 Minecraft 实例与运行状态。不会通过这里启动或停止服务端。</p><label for="mcsm-url">面板地址</label><input id="mcsm-url" type="url" required placeholder="http://127.0.0.1:23333"><label for="mcsm-key">API Key</label><input id="mcsm-key" type="password" autocomplete="new-password" maxlength="256" placeholder="填写 MCSM API Key"><small id="mcsm-key-help">密钥仅保存于服务端，保存后不会回显。</small><p id="mcsm-connection-error" class="error-text" role="status" hidden></p><button class="primary" type="submit">保存并连接</button></form>
+            <div class="panel settings-panel transfer-stats"><h2>当前传输</h2><div class="transfer-numbers"><div><strong id="active-downloads">0</strong><span>下载中</span></div><div><strong id="active-uploads">0</strong><span>上传中</span></div></div><div id="active-transfers"></div><p id="traffic-totals" class="muted"></p></div>
+          </div>
+        </div>
+      </section>
+      <footer class="main-footer"><span>97Launch / 授权服务</span><span id="updated-at">正在连接</span></footer>
+    </main>
+  </div>
+  <dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">撤销授权？</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button value="confirm" class="danger">确认撤销</button></div></form></dialog>
+  <dialog id="issue-dialog" aria-labelledby="issue-title">
+    <div class="issue-heading"><div><h2 id="issue-title">获取配对 Token</h2><p>为指定 QQ 签发，五分钟内仅可兑换一次。</p></div><button id="close-issue" class="quiet" type="button" aria-label="关闭">×</button></div>
+    <form id="issue-form">
+      <label for="issue-qq">所属 QQ</label><input id="issue-qq" inputmode="numeric" pattern="[0-9]{5,20}" maxlength="20" autocomplete="off" required placeholder="输入 QQ 号">
+      <label for="issue-group">来源群</label><select id="issue-group" required></select>
+      <p id="issue-no-groups" class="issue-help" hidden>请先在接入设置中开放 QQ 群。<button id="issue-settings" class="text-link" type="button">前往设置</button></p>
+      <label for="issue-nickname">昵称 <span class="muted">可不填</span></label><input id="issue-nickname" maxlength="64" autocomplete="off" placeholder="便于识别申请人">
+      <p class="issue-help">生成后，该 QQ 先前未兑换的 Token 将失效；仍受配对权限与设备数量限制。</p>
+      <p id="issue-error" class="error-text" role="alert" hidden></p>
+      <button id="issue-submit" class="primary" type="submit">生成 Token</button>
+    </form>
+    <div id="issue-result" class="issue-result" hidden>
+      <label for="issued-token">配对 Token</label><input id="issued-token" readonly spellcheck="false" autocomplete="off" aria-describedby="issued-expiry">
+      <div class="issue-result-actions"><span id="issued-expiry" role="status"></span><button id="copy-token" class="secondary" type="button">复制 Token</button></div>
+      <small>完整 Token 仅在此处显示，关闭后不能找回。</small>
+    </div>
+  </dialog>
+  <dialog id="server-dialog" class="catalog-dialog" aria-labelledby="server-dialog-title">
+    <div class="issue-heading"><div><h2 id="server-dialog-title">配置服务器</h2><p id="server-source"></p></div><button class="quiet" type="button" data-close-dialog="server-dialog" aria-label="关闭">×</button></div>
+    <form id="server-form"><input id="server-edit-id" type="hidden"><input id="server-daemon" type="hidden"><input id="server-instance" type="hidden"><div class="form-grid"><label class="span-two">显示名称<input id="server-name" maxlength="80" required></label><label class="span-two">简介<input id="server-description" maxlength="250" placeholder="介绍服务器玩法"></label><label>玩家连接地址<input id="server-host" required maxlength="253" placeholder="IP 或域名"></label><label>游戏端口<input id="server-port" type="number" min="1" max="65535" required></label><label>Minecraft 版本<input id="server-mc" maxlength="64" placeholder="例如 1.21.1"></label><label>加载器<input id="server-loader" maxlength="64" placeholder="例如 NeoForge 21.1"></label><label class="span-two">关联客户端整合包<select id="server-pack"></select><small>未关联时，玩家看到「暂无相关实例」。</small></label></div>
+      <details class="server-advanced"><summary>检测与可见范围</summary><div class="form-grid"><label>状态检测地址<input id="server-probe-host" required maxlength="253"></label><label>状态检测端口<input id="server-probe-port" type="number" min="1" max="65535" required></label><label class="span-two">可见 QQ 群<textarea id="server-groups" rows="2" placeholder="留空向所有已授权设备开放；每行一个群号"></textarea></label><label>显示顺序<input id="server-order" type="number" min="-10000" max="10000" value="0" required></label></div><small>检测地址由后端访问。同机部署通常使用 127.0.0.1，玩家连接地址应填写公网 IP 或域名。</small></details>
+      <div class="publish-controls"><label><input id="server-published" type="checkbox">发布到启动器</label><label><input id="server-maintenance" type="checkbox">维护中</label></div><p id="server-form-error" class="error-text" role="alert" hidden></p><div class="dialog-actions"><button class="secondary" type="button" data-close-dialog="server-dialog">取消</button><button id="server-save" class="primary" type="submit">保存服务器</button></div>
+    </form>
+  </dialog>
+  <dialog id="upload-dialog" class="catalog-dialog upload-dialog" aria-labelledby="upload-title">
+    <div class="issue-heading"><div><h2 id="upload-title">上传客户端整合包</h2><p>上传完整文件后校验并入库，再关联到服务器。</p></div><button class="quiet" type="button" data-close-dialog="upload-dialog" aria-label="关闭">×</button></div>
+    <form id="upload-form"><label for="upload-pack">整合包</label><select id="upload-pack"></select><label for="upload-name">整合包名称</label><input id="upload-name" maxlength="80" required placeholder="例如 All the Mods 9"><label for="upload-version">版本号</label><input id="upload-version" maxlength="60" required placeholder="例如 1.1.1"><label for="upload-file" class="file-picker"><svg><use href="#pack-icon"/></svg><span>选择 ZIP / MRPACK 文件</span><small id="upload-file-name">支持断点续传，不覆盖已有版本</small><input id="upload-file" type="file" accept=".zip,.mrpack" required></label><p id="upload-error" class="error-text" role="alert" hidden></p><button id="upload-submit" class="primary" type="submit">开始上传</button></form>
+    <div id="upload-running" hidden><strong id="upload-current-name"></strong><progress id="upload-progress" value="0" max="1" aria-label="上传进度"></progress><div class="upload-progress-label"><span id="upload-state" role="status">准备上传</span><span id="upload-percent">0%</span></div><small id="upload-counter"></small><div class="dialog-actions"><button id="upload-pause" class="secondary" type="button">暂停</button><button id="upload-continue" class="primary" type="button" hidden>继续上传</button><button id="upload-dismiss" class="quiet" type="button">关闭</button></div></div>
+  </dialog>
+  <input id="resume-file" type="file" accept=".zip,.mrpack" hidden>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="device-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></symbol>
+    <symbol id="pair-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"/></symbol>
+    <symbol id="log-icon" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="settings-icon" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></symbol>
+    <symbol id="refresh-icon" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 11-2l3 4M4 15l3 4a7 7 0 0 0 11-2"/></symbol>
+    <symbol id="server-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M16 6.5h2M16 17.5h2"/></symbol>
+    <symbol id="pack-icon" viewBox="0 0 24 24"><path d="m12 3 9 5v9l-9 5-9-5V8zm0 10 9-5M12 13 3 8m9 5v9M8 5l9 5"/></symbol>
+    <symbol id="traffic-icon" viewBox="0 0 24 24"><path d="M7 3v17m-4-4 4 4 4-4M17 21V4m-4 4 4-4 4 4"/></symbol>
+  </defs></svg>
+</body>
+</html>

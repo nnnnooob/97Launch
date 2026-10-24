@@ -1,0 +1,34 @@
+<UserControl
+    x:Class="Launcher.App.Controls.SidebarItem"
+    x:Name="ItemRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    HorizontalContentAlignment="Stretch"
+    IsTabStop="False">
+    <Grid Padding="12,8" ColumnSpacing="10" MinHeight="48" Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Border Width="30" Height="30" CornerRadius="8" VerticalAlignment="Center"
+                Background="{ThemeResource SidebarIconBackgroundBrush}">
+            <Viewbox Width="17" Height="17" Stretch="Uniform">
+                <Path x:Name="IconPath" Width="24" Height="24"
+                      Stroke="{Binding Foreground, ElementName=TitleText}" StrokeThickness="1.7"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+            </Viewbox>
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+            <TextBlock x:Name="TitleText" Text="{Binding Title, ElementName=ItemRoot}" FontSize="14" FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBlock x:Name="SubtitleText" Text="{Binding Subtitle, ElementName=ItemRoot}" FontSize="12"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" Visibility="Collapsed" />
+        </StackPanel>
+        <Border x:Name="BadgeSurface" Grid.Column="2" MinWidth="24" Padding="6,2" CornerRadius="7"
+                Background="{ThemeResource SidebarBadgeBackgroundBrush}" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="{Binding Badge, ElementName=ItemRoot}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,20 @@
+<UserControl x:Class="Launcher.App.Views.LauncherAuthorizationPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{ThemeResource PlaceholderCardStyle}">
+        <StackPanel Spacing="10">
+            <Grid>
+                <TextBlock Style="{ThemeResource SectionHeaderStyle}" Text="启动器授权" />
+                <TextBlock x:Name="AuthorizationBadge" HorizontalAlignment="Right" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" />
+            </Grid>
+            <TextBlock x:Name="AuthorizationOwner" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="AuthorizationDetails" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            <TextBlock x:Name="AuthorizationMessage" FontSize="13" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                <Button x:Name="VerifyButton" Content="重新验证" Click="VerifyButton_Click" />
+                <Button x:Name="LogoutButton" Content="退出本机授权" Click="LogoutButton_Click" />
+            </StackPanel>
+            <TextBlock Text="此授权用于访问启动器；Minecraft 游戏账号在左上角单独管理。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+    </Border>
+</UserControl>
