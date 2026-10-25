@@ -43,6 +43,7 @@ public:
     bool loading() const { return m_loading; }
     bool readingPack() const { return m_readingPack; }
     QString error() const { return m_error; }
+    bool storageValid() const { return m_storeValid; }
     void setQuery(const QString& query);
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void selectFolder(const QString& path);

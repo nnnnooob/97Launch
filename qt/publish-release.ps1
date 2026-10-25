@@ -1,15 +1,17 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory)][ValidateRange(1,65535)][int]$BuildNumber,
-    [string]$VersionSuffix='alpha.3',
+    [string]$VersionSuffix='alpha.4',
     [ValidateSet('preview','stable')][string]$Channel='preview',
     [string]$QtSdk='',
     [string]$AuthorizationConfigPath='',
+    [switch]$SkipSigning,
     [string]$SigningKeyPath=(Join-Path $env:USERPROFILE '.97launch-private/update-signing-private.pem')
 )
 $ErrorActionPreference='Stop'
 Set-Location $PSScriptRoot
-if (!(Test-Path -LiteralPath $SigningKeyPath)) { throw 'Missing private update signing key.' }
+if ($SkipSigning -and !$VersionSuffix.EndsWith('-local')) { throw 'Unsigned development packages must use a -local version suffix.' }
+if (!$SkipSigning -and !(Test-Path -LiteralPath $SigningKeyPath)) { throw 'Missing private update signing key.' }
 if (!$QtSdk) { $QtSdk=Join-Path (Split-Path $PSScriptRoot -Parent) '_toolchains/Qt/6.6.3/msvc2019_64' }
 ./build.ps1 -BuildNumber $BuildNumber -VersionSuffix $VersionSuffix -QtSdk $QtSdk -AuthorizationConfigPath $AuthorizationConfigPath
 $version=(Get-Item -LiteralPath '97LaunchQt.exe').VersionInfo.ProductVersion
@@ -58,6 +60,7 @@ $exe=Join-Path $output '97Launch.exe'
 Copy-Item -LiteralPath 'build-basic/bin/97Launch.exe' -Destination $exe
 $file=Get-Item -LiteralPath $exe
 if($file.VersionInfo.FilePrivatePart -ne $BuildNumber -or $file.VersionInfo.ProductVersion -ne $version -or $file.VersionInfo.ProductName -ne '97Launch Qt'){throw 'Release metadata mismatch.'}
+if($SkipSigning){Write-Output "Local single-EXE package prepared: $exe";return}
 Add-Type -TypeDefinition @'
 using System;using System.IO;using System.Security.Cryptography;
 public static class QtReleaseSigning {

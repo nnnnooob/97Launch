@@ -11,6 +11,7 @@
 
 class QNetworkReply;
 class MicrosoftAuthWindow;
+class WebViewRuntime;
 
 class Accounts : public QObject {
     Q_OBJECT
@@ -29,6 +30,8 @@ public:
     int count() const { return m_accounts.size(); }
     bool busy() const { return m_busy; }
     QString error() const { return m_error; }
+    bool storageValid() const { return m_storeValid; }
+    void attachWebViewRuntime(WebViewRuntime* runtime);
     QString status() const { return m_status; }
     QStringList profiles() const;
     bool acceptLaunchRefresh(const QVariantMap& encryptedPatch);
@@ -81,6 +84,8 @@ private:
     QString m_selected, m_directory, m_path;
     std::unique_ptr<QNetworkAccessManager> m_network;
     std::unique_ptr<MicrosoftAuthWindow> m_browser;
+    WebViewRuntime* m_webViewRuntime=nullptr;
+    bool m_waitingForWebView=false;
     QSet<QNetworkReply*> m_authReplies;
     QTimer m_authTimeout;
     int m_generation = 0;

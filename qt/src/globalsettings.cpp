@@ -162,6 +162,7 @@ void GlobalSettings::attachJobs(InstanceJobs* reader,InstanceJobs* transfers,Ins
         emit changed();
         if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsLogout"||action=="settingsPair")emit authorizationResolved(action);
         if(action.startsWith("settingsUpdate"))emit updatesResolved(action);
+        if(action=="settingsJava")emit javaResolved(true);
     };
     connect(reader,&InstanceJobs::completed,this,completed);connect(transfers,&InstanceJobs::completed,this,completed);connect(authorization,&InstanceJobs::completed,this,completed);
     auto failed=[this](const QString& action,const QString& error,const QString&){
@@ -174,6 +175,7 @@ void GlobalSettings::attachJobs(InstanceJobs* reader,InstanceJobs* transfers,Ins
         }else m_error=error;
         emit changed();
         if(action.startsWith("settingsUpdate"))emit updatesResolved(action);
+        if(action=="settingsJava")emit javaResolved(false);
         if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsPair"||action=="settingsLogout")emit authorizationResolved(action);
     };
     connect(reader,&InstanceJobs::failed,this,failed);connect(transfers,&InstanceJobs::failed,this,failed);connect(authorization,&InstanceJobs::failed,this,failed);

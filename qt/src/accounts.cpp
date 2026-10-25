@@ -1,4 +1,5 @@
 #include "accounts.h"
+#include "webviewruntime.h"
 #include "authbrowser.h"
 #include <QBuffer>
 #include <QCryptographicHash>
@@ -219,6 +220,7 @@ bool Accounts::begin(const QString& message) {
     return true;
 }
 void Accounts::cancelLogin() {
+    m_waitingForWebView=false;
     ++m_generation;
     m_authTimeout.stop();
     m_browser.reset();
@@ -313,7 +315,22 @@ QString Accounts::clientId() {
     const auto configured = qEnvironmentVariable("PCL_MS_CLIENT_ID").trimmed();
     return configured.isEmpty() ? "28e30885-6643-4228-98bf-984eb6021d7d" : configured;
 }
+void Accounts::attachWebViewRuntime(WebViewRuntime* runtime) {
+    m_webViewRuntime=runtime;
+    connect(runtime,&WebViewRuntime::changed,this,[this]{if(m_waitingForWebView&&m_busy)progress(m_webViewRuntime->detail());});
+    connect(runtime,&WebViewRuntime::finished,this,[this](bool ready){
+        if(!m_waitingForWebView)return;
+        m_waitingForWebView=false;
+        if(!m_busy)return;
+        if(!ready){fail(m_webViewRuntime->error());return;}
+        m_busy=false;startMicrosoft();
+    });
+}
 void Accounts::startMicrosoft() {
+    if(m_webViewRuntime&&!m_webViewRuntime->available()){
+        if(!begin("正在准备微软登录环境…"))return;
+        m_waitingForWebView=true;m_webViewRuntime->ensure();return;
+    }
     if (!begin(QStringLiteral("请在微软登录窗口中完成授权。"))) return;
     m_oauthRedirect = qEnvironmentVariable("PCL_MS_REDIRECT_URI").trimmed();
     if (m_oauthRedirect.isEmpty()) m_oauthRedirect = defaultMicrosoftRedirect;

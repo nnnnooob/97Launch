@@ -14,6 +14,7 @@ Item {
     readonly property bool verifying: !!authorization.busy || !launcherFlow.initialized
     readonly property bool retry: !!authorization.hasCredential && !showPairing
     readonly property bool updating: displayedView === "update"
+    readonly property bool preparing: displayedView === "preparation"
     property bool showPairing: false
     property bool messageDismissed: false
     property string displayedView: "pairing"
@@ -190,7 +191,7 @@ Item {
                 contentHeight: pairingForm.implicitHeight
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                visible: !page.updating
+                visible: !page.updating && !page.preparing
                 Controls.ScrollBar.vertical: Controls.ScrollBar {
                     width: 3
                 }
@@ -288,6 +289,91 @@ Item {
                             text: "取消验证"
                             onClicked: globalSettings.cancelAuthorization()
                         }
+                    }
+                }
+            }
+            Flickable {
+                width: parent.width
+                height: parent.height
+                visible: page.preparing
+                contentHeight: preparationForm.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+                Controls.ScrollBar.vertical: Controls.ScrollBar { width: 3 }
+                Column {
+                    id: preparationForm
+                    width: parent.width
+                    spacing: 12
+                    Text {
+                        text: "首次准备"
+                        font.pixelSize: 30
+                        font.weight: Font.DemiBold
+                        color: "#454d59"
+                    }
+                    Text {
+                        width: parent.width
+                        text: "正在准备本地环境，完成后自动进入。"
+                        font.pixelSize: 12
+                        color: "#939ba7"
+                        wrapMode: Text.Wrap
+                    }
+                    Column {
+                        width: parent.width
+                        spacing: 14
+                        Repeater {
+                            model: launcherFlow.preparationSteps
+                            delegate: Row {
+                                required property var modelData
+                                spacing: 10
+                                Text {
+                                    width: 14
+                                    text: modelData.state === "done" ? "✓" : modelData.state === "active" ? "●" : modelData.state === "error" ? "!" : "○"
+                                    color: modelData.state === "error" ? "#c36969" : modelData.state === "waiting" ? "#a4acb7" : "#687384"
+                                    font.pixelSize: 13
+                                }
+                                Text {
+                                    text: modelData.label
+                                    color: modelData.state === "waiting" ? "#939ba7" : "#454d59"
+                                    font.pixelSize: 12
+                                }
+                            }
+                        }
+                    }
+                    ProgressTrack {
+                        width: parent.width
+                        from: 0
+                        to: 1
+                        value: launcherFlow.preparationProgress
+                        indeterminate: launcherFlow.preparationBusy
+                    }
+                    Text {
+                        width: parent.width
+                        text: launcherFlow.preparationDetail
+                        color: "#939ba7"
+                        font.pixelSize: 11
+                        wrapMode: Text.Wrap
+                        Accessible.role: Accessible.StaticText
+                    }
+                    Text {
+                        width: parent.width
+                        visible: text.length > 0
+                        text: launcherFlow.preparationError
+                        color: "#c36969"
+                        font.pixelSize: 11
+                        wrapMode: Text.WrapAnywhere
+                    }
+                    Row {
+                        spacing: 8
+                        visible: !launcherFlow.preparationBusy && !!launcherFlow.preparationError
+                        LiteButton { text: "重新准备"; primary: true; onClicked: launcherFlow.retryPreparation() }
+                        LiteButton { text: "稍后安装"; visible: launcherFlow.canSkipPreview; onClicked: launcherFlow.skipPreview() }
+                    }
+                    Text {
+                        width: parent.width
+                        text: "首次完成后，下次将直接进入。"
+                        color: "#a4acb7"
+                        font.pixelSize: 10
+                        wrapMode: Text.Wrap
                     }
                 }
             }
@@ -445,7 +531,7 @@ Item {
             }
             LinkButton {
                 anchors.right: parent.right
-                visible: !page.updating
+                visible: !page.updating && !page.preparing
                 enabled: !page.verifying
                 text: "检查更新"
                 onClicked: launcherFlow.openUpdates(true)

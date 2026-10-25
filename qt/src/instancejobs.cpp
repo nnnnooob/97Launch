@@ -135,7 +135,7 @@ bool InstanceJobs::submit(const QString& action, const QVariantMap& args) {
     startNext(); emit changed(); return true;
 }
 bool InstanceJobs::settings(const QString& action,const QVariantMap& args,const QString& instancePath) {
-    const QSet<QString> actions{"settingsLaunchStatus","settingsJava","settingsProbeJava","settingsReadPreset","settingsAuthorization","settingsVerify","settingsLogout","settingsPair","settingsUpdateState","settingsUpdateConfig","settingsUpdateCheck","settingsUpdateDownload","settingsUpdateApply","settingsAcknowledge"};
+    const QSet<QString> actions{"settingsLaunchStatus","settingsInstallWebView","settingsJava","settingsProbeJava","settingsReadPreset","settingsAuthorization","settingsVerify","settingsLogout","settingsPair","settingsUpdateState","settingsUpdateConfig","settingsUpdateCheck","settingsUpdateDownload","settingsUpdateApply","settingsAcknowledge"};
     if(!actions.contains(action))return fail("未知设置操作。");
     const auto instance=instancePath.isEmpty()?QVariantMap{}:m_instances->details(instancePath);
     if(!instancePath.isEmpty()&&instance.isEmpty())return fail("实例已不存在，请刷新列表。");

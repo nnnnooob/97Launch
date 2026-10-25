@@ -16,6 +16,7 @@ internal static class SettingsActions {
     }
     public static async Task<object> RunAsync(JsonNode request,CancellationToken token){
         var action=Text(request,"action");var args=request["args"]??new JsonObject();
+        if(action=="settingsInstallWebView")return await WebViewRuntimeInstaller.EnsureAsync(token);
         var store=new SettingsStore(Path.Combine(AppInfo.DataDirectory,"settings.json"));
         var settings=DownloadActions.EffectiveSettings(request,store);
         if(action=="settingsLaunchStatus")return await LaunchStatusAction.ReadAsync(request,settings,store,token);

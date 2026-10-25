@@ -17,6 +17,7 @@
 #include "instancejobs.h"
 #include "globalsettings.h"
 #include "launcherflow.h"
+#include "webviewruntime.h"
 #include "launchstatus.h"
 #include "gamelaunch.h"
 #include "servercatalog.h"
@@ -147,7 +148,10 @@ int main(int argc, char** argv)
     InstanceJobs authorizationJobs(&instances, &instanceSettings);
     GlobalSettings globalSettings(&instances);
     globalSettings.attachJobs(&settingsJobs, &instanceJobs, &authorizationJobs);
-    LauncherFlow launcherFlow(&globalSettings);
+    InstanceJobs runtimeJobs(&instances, &instanceSettings);
+    WebViewRuntime webViewRuntime(&runtimeJobs);
+    accounts.attachWebViewRuntime(&webViewRuntime);
+    LauncherFlow launcherFlow(&globalSettings, &instances, &accounts, &webViewRuntime);
     InstanceJobs serverJobs(&instances, &instanceSettings);
     ServerCatalog serverCatalog(&instances, &globalSettings, &launcherFlow, &serverJobs, &instanceJobs);
     InstanceJobs launchStatusJobs(&instances, &instanceSettings);

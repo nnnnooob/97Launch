@@ -24,6 +24,7 @@ public:
     QVariantMap values() const { return m_values; }
     QVariantMap memory() const { return m_memory; }
     QString error() const { return m_error; }
+    bool storageValid() const { return m_valid; }
     QString dataDirectory() const;
     QString logDirectory() const;
     QString version() const;
@@ -64,6 +65,7 @@ signals:
     void keyCaptured(const QString& key);
     void authorizationResolved(const QString& action);
     void updatesResolved(const QString& action);
+    void javaResolved(bool success);
 protected:
     bool eventFilter(QObject* watched,QEvent* event) override;
 private:
