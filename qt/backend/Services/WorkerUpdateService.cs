@@ -15,6 +15,10 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
     public string Status="尚未检查更新",Detail="";
     public UpdateRelease? Latest,Ready;
     private void Notify() { }
+    private static void DeleteCacheFile(string path) {
+        try { File.Delete(path); }
+        catch (DirectoryNotFoundException) { }
+    }
     public async Task LoadAsync(CancellationToken token,bool startup=false,bool waitForResult=false) {
         try { if(File.Exists(PreferencesPath)) _preferences=JsonSerializer.Deserialize<Preferences>(await File.ReadAllTextAsync(PreferencesPath,token),UpdateTrust.Json)??new(); }
         catch(Exception ex) when(ex is IOException or JsonException or UnauthorizedAccessException) { Detail="无法读取更新偏好，暂用测试版通道。"; }
@@ -27,7 +31,7 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
             if(File.Exists(ReadyPath)){
                 var ready=JsonSerializer.Deserialize<UpdateRelease>(await File.ReadAllTextAsync(ReadyPath,token),UpdateTrust.Json);
                 if(ready is not null&&ready.Build>AppInfo.BuildNumber&&(_preferences.Channel=="preview"||ready.Channel=="stable")) {await UpdateTrust.VerifyFileAsync(ready,UpdateTrust.FilePath(ready),token);Ready=Latest=ready;Status="更新已下载，等待重启";}
-                else File.Delete(ReadyPath);
+                else DeleteCacheFile(ReadyPath);
             }
         }
         catch(Exception ex) when(ex is IOException or JsonException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException){Ready=Latest=null;Status="更新缓存不可用，请重新检查";Detail=ex.Message;}
@@ -39,7 +43,7 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
             try {
                 var result=JsonSerializer.Deserialize<UpdateResult>(await File.ReadAllTextAsync(UpdateBootstrap.ResultPath,token),UpdateTrust.Json);
                 if(result is not null){Status=result.Success?"更新成功":"已恢复上一版本";Detail=result.Message;}
-                if(startup)File.Delete(UpdateBootstrap.ResultPath);
+                if(startup)DeleteCacheFile(UpdateBootstrap.ResultPath);
             }catch(Exception ex) when(ex is IOException or JsonException or UnauthorizedAccessException) { Detail="无法读取上次更新结果。"; }
         }
         if(startup)Cleanup();
@@ -47,7 +51,7 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
     public object Snapshot()=>new {status=Status,detail=Detail,latest=Latest,ready=Ready is not null,channel=_preferences.Channel,startupCheck=_preferences.CheckOnStartup,busy=false,downloading=false,progress=Progress,currentVersion=AppInfo.Version,currentBuild=AppInfo.BuildNumber,error=""};
     public void Configure(string channel,bool startup){
         if(channel is not ("preview" or "stable"))throw new ArgumentException("更新通道无效。");
-        if(channel!=_preferences.Channel){Latest=Ready=null;File.Delete(ReadyPath);File.Delete(LatestPath);Status="更新通道已切换，请重新检查";}
+        if(channel!=_preferences.Channel){Latest=Ready=null;DeleteCacheFile(ReadyPath);DeleteCacheFile(LatestPath);Status="更新通道已切换，请重新检查";}
         _preferences=new(channel,startup);UpdateTrust.Save(PreferencesPath,_preferences);
     }
     public async Task CheckAsync(CancellationToken token,bool silent=false){
@@ -58,10 +62,10 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
         Latest=check.Available?check.Release:null;
         if(Latest is not null&&silent&&File.Exists(UpdateBootstrap.FailedBuildPath)&&
             JsonSerializer.Deserialize<int>(await File.ReadAllTextAsync(UpdateBootstrap.FailedBuildPath,token))==Latest.Build){
-            Latest=null;File.Delete(LatestPath);Status="已跳过上次启动失败的构建";Detail="可以手动检查后重试，或等待后续版本。";return;
+            Latest=null;DeleteCacheFile(LatestPath);Status="已跳过上次启动失败的构建";Detail="可以手动检查后重试，或等待后续版本。";return;
         }
-        if(Latest is not null)UpdateTrust.Save(LatestPath,Latest);else File.Delete(LatestPath);
-        if(Ready is not null&&Ready.Id!=check.Release?.Id){Ready=null;File.Delete(ReadyPath);}
+        if(Latest is not null)UpdateTrust.Save(LatestPath,Latest);else DeleteCacheFile(LatestPath);
+        if(Ready is not null&&Ready.Id!=check.Release?.Id){Ready=null;DeleteCacheFile(ReadyPath);}
         Status=Ready is not null?"更新已下载，等待重启":Latest is not null?"发现新版本":check.Release is null?"当前通道尚未发布版本":"已是当前通道的最新版本";
         Detail=Latest is {} release?$"v{release.Version} · 构建 {release.Build} · {release.Size/1048576d:0.0} MiB":"检查时间："+DateTime.Now.ToString("HH:mm:ss");
     }

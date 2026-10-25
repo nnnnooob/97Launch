@@ -10,6 +10,11 @@
 #include <QWindow>
 #include <QScreen>
 #include <QStyleHints>
+#include <QLockFile>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QCryptographicHash>
+#include <QThread>
 #include <QAbstractNativeEventFilter>
 #include "accounts.h"
 #include "instances.h"
@@ -134,6 +139,36 @@ int main(int argc, char** argv)
             + (context.category ? context.category : "default") + ' ' + message.toUtf8() + '\n');
         log.flush();
     });
+    const auto startupError=[](const QString& message){
+        qCritical().noquote()<<message;
+#ifdef Q_OS_WIN
+        MessageBoxW(nullptr,message.toStdWString().c_str(),L"97Launch",MB_OK|MB_ICONERROR);
+#endif
+        return 1;
+    };
+    const auto dataDirectory=qEnvironmentVariable("LOCALAPPDATA",QDir::homePath()+"/AppData/Local")+"/97LaunchQt";
+    if(!QDir().mkpath(dataDirectory))return startupError("无法创建本地数据目录，请检查目录权限或磁盘空间。");
+    QLockFile instanceLock(dataDirectory+"/instance.lock");
+    instanceLock.setStaleLockTime(0);
+    const auto serverName="97LaunchQt-ui-"+QString::fromLatin1(QCryptographicHash::hash(QDir::cleanPath(dataDirectory).toCaseFolded().toUtf8(),QCryptographicHash::Sha256).toHex().left(24));
+    if(!instanceLock.tryLock(0)){
+        if(instanceLock.error()!=QLockFile::LockFailedError)return startupError("无法锁定启动器数据目录，请检查目录权限。");
+#ifdef Q_OS_WIN
+        qint64 pid=0;QString host,name;
+        if(instanceLock.getLockInfo(&pid,&host,&name)&&pid>0&&pid<=MAXDWORD)AllowSetForegroundWindow(static_cast<DWORD>(pid));
+#endif
+        for(int attempt=0;attempt<4;++attempt){
+            QLocalSocket activation;
+            activation.connectToServer(serverName);
+            if(activation.waitForConnected(500)){activation.disconnectFromServer();return 0;}
+            if(attempt<3)QThread::msleep(100);
+        }
+        qInfo()<<"启动器已运行，未创建第二个实例";return 0;
+    }
+    QLocalServer activationServer;
+    activationServer.setSocketOptions(QLocalServer::UserAccessOption);
+    QLocalServer::removeServer(serverName);
+    if(!activationServer.listen(serverName))return startupError("无法创建启动器窗口激活通道："+activationServer.errorString());
     WindowActions windowActions;
     Accounts accounts;
     Instances instances;
@@ -190,6 +225,14 @@ int main(int argc, char** argv)
     if (engine.rootObjects().isEmpty()) return 1;
     auto* window = qobject_cast<QWindow*>(engine.rootObjects().first());
     if (!window) return 1;
+    QObject::connect(&activationServer,&QLocalServer::newConnection,window,[&activationServer,window]{
+        while(auto* socket=activationServer.nextPendingConnection()){socket->close();socket->deleteLater();}
+        if(window->windowState()==Qt::WindowMinimized)window->showNormal();else window->show();
+        window->raise();window->requestActivate();
+#ifdef Q_OS_WIN
+        SetForegroundWindow(reinterpret_cast<HWND>(window->winId()));
+#endif
+    });
     windowActions.attachWindow(window);
     const auto available = window->screen()->availableGeometry();
     window->setPosition(available.center() - QPoint(window->width() / 2, window->height() / 2));
