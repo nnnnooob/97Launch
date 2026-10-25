@@ -4,8 +4,8 @@
 
 ## 这是什么
 
-97Launch 是一个轻量的 Minecraft: Java 版启动器，使用 WinUI 3（C# / .NET 8）开发，
-采用 Windows 11 原生的 Fluent 界面。它的目标是把「启动游戏」这件事做得足够简单：
+97Launch 是一个轻量的 Minecraft: Java 版启动器。当前 alpha.3 使用 Qt Quick / C++ 界面，
+配合自包含的 .NET 8 游戏与下载任务进程。原 WinUI 3 源码保留在 `src/`。它的目标是把「启动游戏」这件事做得足够简单：
 打开就能看到当前实例，点一下就能进游戏，不需要在层层菜单里翻找。
 
 本项目为个人小范围使用，不属于商业产品，免费分发、无广告。
@@ -19,17 +19,24 @@
 
 ## 开发与构建
 
-使用 Windows、.NET 8 SDK，以及支持 WinUI 3 的 Visual Studio 构建工具。
+当前 Qt 版源码位于 [`qt/`](qt/)，需要 Windows、Visual Studio C++ 构建工具、.NET 8 SDK 和 Qt 6.6.3 MSVC x64（Qt Quick、Qt Image Formats）。
 
 先按 `authorization-server.example.json` 在仓库根目录创建本地 `authorization-server.json`，填写实际服务地址。该文件由 Git 忽略，发布时会随单文件打包。
 
 ```powershell
-./build.ps1 -Restart
+cd qt
+./build.ps1 -Run -QtSdk 'C:/Qt/6.6.3/msvc2019_64' -AuthorizationConfigPath '../authorization-server.json'
 ```
 
-统一生成根目录 `97Launch.exe`，与内置游戏目录 `.minecraft` 同级。EXE 包含 .NET、WinUI 运行库与图片/模型资源，启动时自动解压到缓存；游戏、账号与设置不写入该解压缓存。中间发布文件位于 `artifacts/portable/win-x64`。皮肤模型使用系统 WebView2，缺少时显示备用头像。
+开发构建生成 `qt/97LaunchQt.exe` 和配套运行文件。对外发布使用：
 
-也可执行 `dotnet publish src/Launcher.App/Launcher.App.csproj -c Release -r win-x64 -p:Platform=x64`，发布成功后同样将单 EXE 复制到仓库根目录。`dotnet build` 仅生成编译中间产物，不作为交付入口。
+```powershell
+./publish-release.ps1 -BuildNumber 3 -Channel preview -QtSdk 'C:/Qt/6.6.3/msvc2019_64' -AuthorizationConfigPath '../authorization-server.json'
+```
+
+产物为 `qt/artifacts/releases/0.1.0-alpha.3-build.3/97Launch.exe` 与签名 `manifest.json`。用户只需一个 EXE，Qt / MSVC / .NET 任务端首次运行自动展开到 `%LOCALAPPDATA%/97LaunchQt/runtime/<包哈希>/`，后续复用。内置游戏目录仍为 EXE 同级 `.minecraft`，账号和设置独立保存。替换此 EXE 即更新整套运行文件；旧版缓存保留以便回滚。Qt 的动态链接库可在缓存目录替换，第三方许可随包提供。微软登录需要系统 WebView2 Runtime。
+
+旧 WinUI 版仍使用仓库根目录的 `./build.ps1 -Restart`，不要与 Qt 构建入口混用。
 
 授权配置见 [客户端接入文档](server/auth/LAUNCHER.md)，后端部署见 [server/auth/README.md](server/auth/README.md)，服务器与整合包接口见 [server/auth/CATALOG.md](server/auth/CATALOG.md)，版本发布见 [应用更新文档](server/auth/UPDATES.md)。
 
@@ -40,20 +47,20 @@
 - **版本下载** — 从官方源获取游戏本体与加载器
 - **启动记录** — 持久化记录实例启动情况，运行日志保存在本机供排查
 - **服务器列表** — 获取关联实例并启动加入服务器
-- **皮肤预览** — 显示账号皮肤模型，支持行走动画与拖动旋转
+- **账号头像** — 显示账号皮肤头像，支持账号切换
 - **应用更新** — 支持检查更新、签名验证、断点续传与重启替换，启动失败时尝试恢复上一版
-- **原生界面** — WinUI 3 实现，跟随系统主题与 DPI
+- **界面** — Qt Quick 灰白界面，共用弹窗、提示及页面切换动效
 
 ## 为什么要用微软账号登录
 
 Minecraft: Java 版自 2021 年起全面迁移至 Microsoft 账号。启动器需要通过
 Microsoft OAuth 完成登录，才能取得玩家自己的游戏档案。
 
-97Launch 使用 **OAuth 2.0 设备代码流**（device code flow）：
+Qt 版使用 **OAuth 2.0 授权码 + PKCE**：
 
-1. 启动器向微软请求一个一次性登录代码
-2. 浏览器中打开微软官方页面，用户自己输入代码并登录
-3. 启动器轮询获取令牌
+1. 按需打开系统 WebView2 中的微软官方授权页面
+2. 用户在微软页面完成登录，应用接收授权码并验证 state
+3. 使用 PKCE 换取令牌，继续 Xbox Live、XSTS 与 Minecraft 授权
 
 **整个过程中，登录完全发生在微软官方页面上，启动器不会、也无法接触到用户的账号密码。**
 

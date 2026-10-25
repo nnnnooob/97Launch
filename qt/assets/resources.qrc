@@ -1,0 +1,21 @@
+<RCC>
+  <qresource prefix="/art">
+    <file>app-icon.ico</file>
+    <file>valley.png</file>
+    <file>clearing.png</file>
+    <file>steve.png</file>
+    <file>default-server.png</file>
+    <file>icons/play.svg</file>
+    <file>icons/instances.svg</file>
+    <file>icons/download.svg</file>
+    <file>icons/transfer.svg</file>
+    <file>icons/settings.svg</file>
+    <file>icons/refresh.svg</file>
+    <file>icons/reset.svg</file>
+    <file>blocks/vanilla.png</file>
+    <file>blocks/fabric.png</file>
+    <file>blocks/forge.png</file>
+    <file>blocks/neoforge.png</file>
+    <file>blocks/snapshot.png</file>
+  </qresource>
+</RCC>

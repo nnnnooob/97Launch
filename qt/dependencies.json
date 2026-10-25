@@ -1,0 +1,7 @@
+{
+  "qtVersion": "6.6.3",
+  "modules": ["Quick", "QuickControls2", "Quick3D"],
+  "style": "Basic",
+  "thirdPartyUiLibraries": []
+}
+
