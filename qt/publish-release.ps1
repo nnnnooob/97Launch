@@ -1,7 +1,7 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory)][ValidateRange(1,65535)][int]$BuildNumber,
-    [string]$VersionSuffix='alpha.5',
+    [string]$VersionSuffix='alpha.6',
     [ValidateSet('preview','stable')][string]$Channel='preview',
     [string]$QtSdk='',
     [string]$AuthorizationConfigPath='',

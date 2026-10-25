@@ -1,7 +1,7 @@
 ﻿param(
     [string]$QtSdk = '',
     [int]$BuildNumber = 0,
-    [string]$VersionSuffix = 'alpha.5',
+    [string]$VersionSuffix = 'alpha.6',
     [string]$AuthorizationConfigPath = '',
     [switch]$Run
 )

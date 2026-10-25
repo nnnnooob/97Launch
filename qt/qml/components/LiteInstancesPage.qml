@@ -398,14 +398,12 @@ Item {
             onClicked: page.navigateRequested(2)
         }
     }
-    LiteIconButton {
+    LiteBackToTop {
         anchors.right: list.right
+        anchors.rightMargin: 20
         anchors.bottom: list.bottom
-        source: "qrc:/art/icons/chevron-down.svg"
-        rotation: 180
-        text: "回到顶部"
-        visible: list.contentY > 200
-        onClicked: list.positionViewAtBeginning()
+        anchors.bottomMargin: 16
+        flickable: list
     }
     Text {
         id: errorLabel
