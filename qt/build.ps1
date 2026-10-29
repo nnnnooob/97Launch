@@ -1,8 +1,9 @@
 ﻿param(
     [string]$QtSdk = '',
     [int]$BuildNumber = 0,
-    [string]$VersionSuffix = 'alpha.6',
+    [string]$VersionSuffix = 'alpha.7',
     [string]$AuthorizationConfigPath = '',
+    [string]$CurseForgeApiKeyPath = '',
     [switch]$Run
 )
 $ErrorActionPreference = 'Stop'
@@ -28,7 +29,8 @@ if (!$AuthorizationConfigPath) {
     if (!(Test-Path -LiteralPath $AuthorizationConfigPath)) { $AuthorizationConfigPath = Join-Path (Split-Path $PSScriptRoot -Parent) '97Launch/authorization-server.json' }
 }
 if (!(Test-Path -LiteralPath $AuthorizationConfigPath)) { throw 'Provide -AuthorizationConfigPath for this deployment.' }
-& dotnet publish (Join-Path $PSScriptRoot 'backend\InstanceWorker.csproj') -c Release -o (Join-Path $PSScriptRoot 'worker') "-p:AuthorizationConfigPath=$AuthorizationConfigPath" --nologo
+if (!$CurseForgeApiKeyPath) { $CurseForgeApiKeyPath = Join-Path $env:USERPROFILE '.97launch-private/curseforge-api-key.txt' }
+& dotnet publish (Join-Path $PSScriptRoot 'backend\InstanceWorker.csproj') -c Release -o (Join-Path $PSScriptRoot 'worker') "-p:AuthorizationConfigPath=$AuthorizationConfigPath" "-p:CurseForgeApiKeyPath=$CurseForgeApiKeyPath" --nologo
 if ($LASTEXITCODE) { throw 'Instance worker build failed.' }
 if (!(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'worker\authorization-server.json') -PathType Leaf)) {
     throw 'Authorization server configuration was not deployed. Provide ../97Launch/authorization-server.json before building.'

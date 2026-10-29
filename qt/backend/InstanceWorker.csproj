@@ -15,6 +15,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources/update-signing-public.pem" LogicalName="Launcher.UpdateSigningRoot.pem" />
     <EmbeddedResource Include="Resources/97launch-auth-ca.pem" LogicalName="Launcher.AuthorizationRoot.pem" />
+    <EmbeddedResource Include="$(CurseForgeApiKeyPath)" Condition="Exists('$(CurseForgeApiKeyPath)')" LogicalName="Launcher.CurseForgeApiKey" />
     <Content Include="$(AuthorizationConfigPath)" Condition="Exists('$(AuthorizationConfigPath)')" Link="authorization-server.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageReference Include="Serilog" Version="4.0.0" />

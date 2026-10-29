@@ -30,6 +30,8 @@
 /.minecraft/
 /.97Launch/
 authorization-server.json
+curseforge-api-key.txt
+curseforge-key.dat
 *.key
 *.pfx
 *.p12

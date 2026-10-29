@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-97Launch 是一个轻量的 Minecraft: Java 版启动器。当前 alpha.6 使用 Qt Quick / C++ 界面，
+97Launch 是一个轻量的 Minecraft: Java 版启动器。当前 alpha.7 使用 Qt Quick / C++ 界面，
 配合自包含的 .NET 8 游戏与下载任务进程。原 WinUI 3 源码保留在 `src/`。它的目标是把「启动游戏」这件事做得足够简单：
 打开就能看到当前实例，点一下就能进游戏，不需要在层层菜单里翻找。
 
@@ -31,10 +31,10 @@ cd qt
 开发构建生成 `qt/97LaunchQt.exe` 和配套运行文件。对外发布使用：
 
 ```powershell
-./publish-release.ps1 -BuildNumber 6 -Channel preview -QtSdk 'C:/Qt/6.6.3/msvc2019_64' -AuthorizationConfigPath '../authorization-server.json'
+./publish-release.ps1 -BuildNumber 7 -Channel preview -QtSdk 'C:/Qt/6.6.3/msvc2019_64' -AuthorizationConfigPath '../authorization-server.json'
 ```
 
-产物为 `qt/artifacts/releases/0.1.0-alpha.6-build.6/97Launch.exe` 与签名 `manifest.json`。用户只需一个 EXE，Qt / MSVC / .NET 任务端首次运行自动展开到 `%LOCALAPPDATA%/97LaunchQt/runtime/<包哈希>/`，后续复用。内置游戏目录仍为 EXE 同级 `.minecraft`，账号和设置独立保存。替换此 EXE 即更新整套运行文件；旧版缓存保留以便回滚。Qt 的动态链接库可在缓存目录替换，第三方许可随包提供。微软登录使用系统 WebView2 Runtime，缺失时自动从微软下载、验签并静默安装。
+产物为 `qt/artifacts/releases/0.1.0-alpha.7-build.7/97Launch.exe` 与签名 `manifest.json`。用户只需一个 EXE，Qt / MSVC / .NET 任务端首次运行自动展开到 `%LOCALAPPDATA%/97LaunchQt/runtime/<包哈希>/`，后续复用。内置游戏目录仍为 EXE 同级 `.minecraft`，账号和设置独立保存。替换此 EXE 即更新整套运行文件；旧版缓存保留以便回滚。Qt 的动态链接库可在缓存目录替换，第三方许可随包提供。微软登录使用系统 WebView2 Runtime，缺失时自动从微软下载、验签并静默安装。
 
 旧 WinUI 版仍使用仓库根目录的 `./build.ps1 -Restart`，不要与 Qt 构建入口混用。
 

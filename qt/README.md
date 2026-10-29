@@ -1,10 +1,12 @@
 # 97Launch Qt
 
-当前发布：**0.1.0-alpha.6 / 构建 6**。Qt Quick 界面配合 C++ 原生服务与自包含 .NET worker，已接入实例、资源、下载、传输、启动、Java 自动获取、服务器、配对授权和更新。
+当前发布：**0.1.0-alpha.7 / 构建 7**。Qt Quick 界面配合 C++ 原生服务与自包含 .NET worker，已接入实例、资源、下载、传输、启动、Java 自动获取、服务器、配对授权和更新。
 
 开发构建：`./build.ps1 -Run -QtSdk <Qt 6.6.3 MSVC x64 目录> -AuthorizationConfigPath <本机配置>`。
 
-对外发布：`./publish-release.ps1 -BuildNumber 6 -Channel preview -QtSdk <SDK目录> -AuthorizationConfigPath <本机配置>`，生成 `artifacts/releases/0.1.0-alpha.6-build.6/97Launch.exe` 与签名清单。后续发布递增构建号。只需分发该 EXE；运行库首次展开后缓存复用，游戏目录位于 EXE 同级。详细机制见 [单 EXE 发布](docs/single-exe.md)。
+对外发布：`./publish-release.ps1 -BuildNumber 7 -Channel preview -QtSdk <SDK目录> -AuthorizationConfigPath <本机配置>`，生成 `artifacts/releases/0.1.0-alpha.7-build.7/97Launch.exe` 与签名清单。后续发布递增构建号。只需分发该 EXE；运行库首次展开后缓存复用，游戏目录位于 EXE 同级。详细机制见 [单 EXE 发布](docs/single-exe.md)。
+
+CurseForge 发布凭据从用户私有目录 `.97launch-private/curseforge-api-key.txt` 嵌入 worker，可用 `-CurseForgeApiKeyPath` 覆盖文件路径；不提交真实密钥。运行时优先读取显式环境变量和包内凭据，其后才回退本机加密配置。
 
 以下保留开发过程记录；标注“本轮”的段落描述当时迁移范围，当前功能以本节和根目录更新记录为准。
 
@@ -12,7 +14,7 @@
 
 首次授权进入后，依次检查本地数据、扫描实例、检索 Java，并准备头像与微软登录环境；成功保存 schema 1 标记后下次跳过。缺少 WebView2 Runtime 时，从微软下载并验证安装程序签名后自动静默安装。安装失败可重试或稍后安装；后续微软登录也会检查并补装。详情见 [首次进入](docs/first-startup.md)。
 
-本地单 EXE 开发包可使用 `./publish-release.ps1 -BuildNumber 6 -VersionSuffix alpha.6-local -SkipSigning`，不生成后台发布签名清单。
+本地单 EXE 开发包可使用 `./publish-release.ps1 -BuildNumber 7 -VersionSuffix alpha.7-local -SkipSigning`，不生成后台发布签名清单。
 
 当前展示固定 800 × 450 逻辑像素（16:9）的 Lite 主界面。标题栏与内容统一浅灰底色，左上角使用纯文字品牌，右上角使用灰色最小化圆点和红色关闭圆点。边框、圆角和阴影由 Windows DWM 处理。支持系统拖动和原生最小化，禁止拉伸、最大化及全屏。
 

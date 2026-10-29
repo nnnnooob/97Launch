@@ -1,10 +1,11 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory)][ValidateRange(1,65535)][int]$BuildNumber,
-    [string]$VersionSuffix='alpha.6',
+    [string]$VersionSuffix='alpha.7',
     [ValidateSet('preview','stable')][string]$Channel='preview',
     [string]$QtSdk='',
     [string]$AuthorizationConfigPath='',
+    [string]$CurseForgeApiKeyPath='',
     [switch]$SkipSigning,
     [string]$SigningKeyPath=(Join-Path $env:USERPROFILE '.97launch-private/update-signing-private.pem')
 )
@@ -13,7 +14,9 @@ Set-Location $PSScriptRoot
 if ($SkipSigning -and !$VersionSuffix.EndsWith('-local')) { throw 'Unsigned development packages must use a -local version suffix.' }
 if (!$SkipSigning -and !(Test-Path -LiteralPath $SigningKeyPath)) { throw 'Missing private update signing key.' }
 if (!$QtSdk) { $QtSdk=Join-Path (Split-Path $PSScriptRoot -Parent) '_toolchains/Qt/6.6.3/msvc2019_64' }
-./build.ps1 -BuildNumber $BuildNumber -VersionSuffix $VersionSuffix -QtSdk $QtSdk -AuthorizationConfigPath $AuthorizationConfigPath
+if (!$CurseForgeApiKeyPath) { $CurseForgeApiKeyPath=Join-Path $env:USERPROFILE '.97launch-private/curseforge-api-key.txt' }
+if (!(Test-Path -LiteralPath $CurseForgeApiKeyPath -PathType Leaf) -or [string]::IsNullOrWhiteSpace([IO.File]::ReadAllText($CurseForgeApiKeyPath))) { throw 'Provide a private CurseForge API key file for this release.' }
+./build.ps1 -BuildNumber $BuildNumber -VersionSuffix $VersionSuffix -QtSdk $QtSdk -AuthorizationConfigPath $AuthorizationConfigPath -CurseForgeApiKeyPath $CurseForgeApiKeyPath
 $version=(Get-Item -LiteralPath '97LaunchQt.exe').VersionInfo.ProductVersion
 if ($Channel -eq 'stable' -and $version.Contains('-')) { throw 'Stable releases cannot contain a prerelease suffix.' }
 $output=Join-Path $PSScriptRoot "artifacts/releases/$version-build.$BuildNumber"
