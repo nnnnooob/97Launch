@@ -1,10 +1,9 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory)][ValidateRange(1,65535)][int]$BuildNumber,
-    [string]$VersionSuffix='alpha.7',
+    [string]$VersionSuffix='alpha.8',
     [ValidateSet('preview','stable')][string]$Channel='preview',
     [string]$QtSdk='',
-    [string]$AuthorizationConfigPath='',
     [string]$CurseForgeApiKeyPath='',
     [switch]$SkipSigning,
     [string]$SigningKeyPath=(Join-Path $env:USERPROFILE '.97launch-private/update-signing-private.pem')
@@ -16,7 +15,7 @@ if (!$SkipSigning -and !(Test-Path -LiteralPath $SigningKeyPath)) { throw 'Missi
 if (!$QtSdk) { $QtSdk=Join-Path (Split-Path $PSScriptRoot -Parent) '_toolchains/Qt/6.6.3/msvc2019_64' }
 if (!$CurseForgeApiKeyPath) { $CurseForgeApiKeyPath=Join-Path $env:USERPROFILE '.97launch-private/curseforge-api-key.txt' }
 if (!(Test-Path -LiteralPath $CurseForgeApiKeyPath -PathType Leaf) -or [string]::IsNullOrWhiteSpace([IO.File]::ReadAllText($CurseForgeApiKeyPath))) { throw 'Provide a private CurseForge API key file for this release.' }
-./build.ps1 -BuildNumber $BuildNumber -VersionSuffix $VersionSuffix -QtSdk $QtSdk -AuthorizationConfigPath $AuthorizationConfigPath -CurseForgeApiKeyPath $CurseForgeApiKeyPath
+./build.ps1 -BuildNumber $BuildNumber -VersionSuffix $VersionSuffix -QtSdk $QtSdk -CurseForgeApiKeyPath $CurseForgeApiKeyPath
 $version=(Get-Item -LiteralPath '97LaunchQt.exe').VersionInfo.ProductVersion
 if ($Channel -eq 'stable' -and $version.Contains('-')) { throw 'Stable releases cannot contain a prerelease suffix.' }
 $output=Join-Path $PSScriptRoot "artifacts/releases/$version-build.$BuildNumber"
@@ -32,7 +31,7 @@ $redist=Get-ChildItem -LiteralPath ($vsPath+'/VC/Redist/MSVC') -Directory -Filte
 if(!$redist){throw 'Missing MSVC runtime deployment directory.'}
 Copy-Item -Path ($redist.FullName+'/x64/Microsoft.VC143.CRT/*.dll') -Destination $stage
 New-Item -ItemType Directory -Path ($stage+'/worker'),($stage+'/imageformats'),($stage+'/licenses') -Force | Out-Null
-Copy-Item -LiteralPath 'worker/97Launch.InstanceWorker.exe','worker/authorization-server.json' -Destination ($stage+'/worker')
+Copy-Item -LiteralPath 'worker/97Launch.InstanceWorker.exe' -Destination ($stage+'/worker')
 Copy-Item -LiteralPath (Join-Path $QtSdk 'plugins/imageformats/qwebp.dll') -Destination ($stage+'/imageformats')
 Copy-Item -LiteralPath 'third_party/WebView2-1.0.3719.77/LICENSE.txt','third_party/WebView2-1.0.3719.77/NOTICE.txt' -Destination ($stage+'/licenses')
 Copy-Item -LiteralPath 'licenses/Qt' -Destination ($stage+'/licenses/Qt') -Recurse

@@ -1,10 +1,10 @@
 # 97Launch Qt
 
-当前发布：**0.1.0-alpha.7 / 构建 7**。Qt Quick 界面配合 C++ 原生服务与自包含 .NET worker，已接入实例、资源、下载、传输、启动、Java 自动获取、服务器、配对授权和更新。
+当前发布：**0.1.0-alpha.8 / 构建 8**。Qt Quick 界面配合 C++ 原生服务与自包含 .NET worker，已接入实例、资源、下载、传输、启动、Java 自动获取和更新。
 
-开发构建：`./build.ps1 -Run -QtSdk <Qt 6.6.3 MSVC x64 目录> -AuthorizationConfigPath <本机配置>`。
+开发构建：`./build.ps1 -Run -QtSdk <Qt 6.6.3 MSVC x64 目录>`。
 
-对外发布：`./publish-release.ps1 -BuildNumber 7 -Channel preview -QtSdk <SDK目录> -AuthorizationConfigPath <本机配置>`，生成 `artifacts/releases/0.1.0-alpha.7-build.7/97Launch.exe` 与签名清单。后续发布递增构建号。只需分发该 EXE；运行库首次展开后缓存复用，游戏目录位于 EXE 同级。详细机制见 [单 EXE 发布](docs/single-exe.md)。
+对外发布：`./publish-release.ps1 -BuildNumber 8 -Channel preview -QtSdk <SDK目录>`，生成 `artifacts/releases/0.1.0-alpha.8-build.8/97Launch.exe` 与签名清单。后续发布递增构建号。只需分发该 EXE；运行库首次展开后缓存复用，游戏目录位于 EXE 同级。详细机制见 [单 EXE 发布](docs/single-exe.md)。
 
 CurseForge 发布凭据从用户私有目录 `.97launch-private/curseforge-api-key.txt` 嵌入 worker，可用 `-CurseForgeApiKeyPath` 覆盖文件路径；不提交真实密钥。运行时优先读取显式环境变量和包内凭据，其后才回退本机加密配置。
 
@@ -14,7 +14,7 @@ CurseForge 发布凭据从用户私有目录 `.97launch-private/curseforge-api-k
 
 首次授权进入后，依次检查本地数据、扫描实例、检索 Java，并准备头像与微软登录环境；成功保存 schema 1 标记后下次跳过。缺少 WebView2 Runtime 时，从微软下载并验证安装程序签名后自动静默安装。安装失败可重试或稍后安装；后续微软登录也会检查并补装。详情见 [首次进入](docs/first-startup.md)。
 
-本地单 EXE 开发包可使用 `./publish-release.ps1 -BuildNumber 7 -VersionSuffix alpha.7-local -SkipSigning`，不生成后台发布签名清单。
+本地单 EXE 开发包可使用 `./publish-release.ps1 -BuildNumber 8 -VersionSuffix alpha.8-local -SkipSigning`，不生成发布签名清单。
 
 当前展示固定 800 × 450 逻辑像素（16:9）的 Lite 主界面。标题栏与内容统一浅灰底色，左上角使用纯文字品牌，右上角使用灰色最小化圆点和红色关闭圆点。边框、圆角和阴影由 Windows DWM 处理。支持系统拖动和原生最小化，禁止拉伸、最大化及全屏。
 
@@ -31,7 +31,6 @@ Qt 账号保存在 `%LOCALAPPDATA%/97LaunchQt/accounts.json`，首次运行兼�
 - qml/components/LiteHome.qml：固定位置的主界面占位内容。
 - qml/components/LiteButton.qml：共用的轻量按钮外观，不使用模糊或离屏效果。
 - qml/components/LiteTopNavigation.qml：顶部图标文字导航与选中反馈。
-- qml/components/LiteServers.qml：右侧轻量卡片式服务器列表示例。
 - qml/components/LiteAccountPane.qml：独立的账号内容与像素头像，底板由页面容器统一绘制。
 - qml/components/AccountDialogs.qml：按需加载的登录方式选择及角色选择弹窗。
 - qml/components/AccountHead.qml：真实账号皮肤与默认头像。
@@ -99,10 +98,10 @@ Qt 账号保存在 `%LOCALAPPDATA%/97LaunchQt/accounts.json`，首次运行兼�
 
 - 启动：隔离、窗口、进程、网络、内存预览及高级参数。全局配置原子保存到 `%LOCALAPPDATA%/97LaunchQt/settings.json`，兼容读取旧 WinUI 配置，保留未知字段；默认游戏设置按字段合并，避免早期版本只存开关导致其他项丢失。
 - Java：复用 WinUI 实际探测器，显示真实版本、厂商、架构与来源；支持重新搜索、手动验证添加、选中详情、打开目录、复制路径和移除手动记录。移除记录不删除 Java 文件。
-- 管理：原授权状态卡和重新验证/退出入口、游戏下载源/线程/限速、社区资源来源/文件名格式、中文偏好。Authlib 升级沿用原界面选项；原 WinUI 尚无此项的实际消费逻辑。
+- 管理：游戏下载源/线程/限速、社区资源来源/文件名格式、中文偏好。Authlib 升级沿用原界面选项；原 WinUI 尚无此项的实际消费逻辑。
 - 默认游戏设置：预设开关、四组滑条和数值框、单键/鼠标绑定与冲突提示、从实例读取、恢复默认值。读取复用原服务，包括原目录隔离规则、配置来源识别和新旧按键格式。首次启动写入服务已迁入任务端，需由后续游戏启动流程调用。
 - 关于：当前版本、实际 Qt 数据/日志目录和运行环境，原目录按钮。Qt 日志写入 `logs/qt.log`。
-- 更新：通道、启动检查、签名验证、下载队列/续传/取消、重启替换/启动确认/回滚逻辑。未配对时也可检查和下载更新，授权请求遵循原服务的匿名/设备授权规则。仅接受 ProductName 为 `97Launch Qt` 的签名更新 EXE，禁止将原 WinUI 更新包替换到 Qt 应用。实际升级需服务端发布匹配的 Qt 更新包。本轮未执行升级。
+- 更新：通道、启动检查、签名验证、下载队列/续传/取消、重启替换/启动确认/回滚逻辑。通过公开 GitHub Releases 读取签名清单并下载安装包。仅接受 ProductName 为 `97Launch Qt` 的签名更新 EXE，禁止将原 WinUI 更新包替换到 Qt 应用。实际升级需服务端发布匹配的 Qt 更新包。本轮未执行升级。
 
 构建入口仍为 `./build.ps1 -Run`；发布签名版本时 CMake 的 `LAUNCH_BUILD_NUMBER` 需与发布清单递增构建号一致。
 
@@ -128,25 +127,6 @@ Qt 账号保存在 `%LOCALAPPDATA%/97LaunchQt/accounts.json`，首次运行兼�
 - 这轮只完善状态卡片及相邻统计内容，未新增游戏进程启动或会话管理。
 
 
-## 配对验证与更新流程
+## 软件更新
 
-修改前备份：`D:/97launch/backups/qt-before-welcome-flow-20261025-171546`。
-
-- 启动先读取并验证设备授权；导航和主内容隐藏，原侧栏白色背景保持原高度，只向右铺满内容区。配对/更新共用左右布局、WinUI 原版山谷图与波浪分隔，控件沿用 Qt 灰色样式。
-- 配对直接调用原 `LauncherAuthorizationService`：完整 Token 格式校验、原兑换接口、DPAPI 当前用户加密、设备心跳、72 小时离线缓存、15 分钟定期验证、取消/重新连接/重新配对和原获取 Token 帮助。授权失效后遮住主界面；配对码经独立工作进程 stdin 传递，发送后移除任务参数中的 Token，不写命令行、任务队列历史或日志。
-- 更新共用 `WorkerUpdateService` 与原签名/哈希/EXE 架构和版本校验、续传/重试/取消、发布撤回复核、重启确认及失败回滚。补齐启动检查跳过上次失败构建、启动结果读取与旧更新会话清理。更新保留稳定/测试通道及启动检查偏好；不会强制下载或重启。Qt 包的 ProductName 检查继续保留。
-- 有效授权且启用启动检查时接入更新页；无新版本后自动继续，有更新或失败时由用户选择。设置页检查/下载入口也进入此流程；已有页面保持缓存。授权未通过时可检查更新并返回验证。
-- 白块 240ms 向右展开，内容稍后淡入；配对/更新内容交叉淡入淡出；完成后白块 260ms 收拢，主界面与导航延迟 80ms 开始淡入。窗口控制和拖动保留。
-- 本轮构建并打开实际页面检查排版；未兑换真实配对码，未下载或执行更新。
-
-
-## 主页服务器目录
-
-修改前备份：`D:/97launch/backups/qt-before-server-catalog-20261025-181731`。
-
-- 范围按本轮确认：服务器列表、刷新、状态/人数/版本/延迟、复制地址及关联实例安装；游戏启动引擎和“启动并加入”另行迁移。
-- 直接迁移 WinUI `ServerCatalogService`，使用同一授权和目录接口。主页可见时每 30 秒刷新；地址与条目校验、100 条限制、顺序、过期状态及最多 4 个 TCP 延迟探测沿用原规则。不请求服务器图标。
-- Qt 使用按服务器 ID 增量更新的列表模型，保留已有卡片和滚动位置。失败保留条目并标记未知；离开主页取消读取，授权失效/切换设备清空旧目录，忽略迟到的回调。
-- 卡片取消整卡按钮缩放，悬停仅底色和边框渐变；操作按钮固定尺寸，避免在列表边缘裁切圆角。
-- 获取相关实例先读取关联包和下载租约，再选择已注册游戏文件夹及实例名；默认名称避让现有实例与排队任务。队列沿用包身份/租约续期、断点续传、下载范围和 SHA-256 校验、重试/取消、原整合包安装器；完成后扫描、选中新实例并返回启动页。下载租约保留在任务端，不送入界面属性。
-- 已构建、启动并看到真实目录的服务器名称、状态、人数、版本和延迟。未执行关联实例安装。
+启动器直接访问公开的 `nnnnooob/97Launch` GitHub Releases。发布标签格式为 `v<版本>+build.<构建号>`，Release 附件为 `manifest.json` 和 `97Launch.exe`，测试版勾选预发布。GitHub 上发布后即可检查更新，撤回请在 GitHub 上处理。

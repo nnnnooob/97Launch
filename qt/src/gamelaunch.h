@@ -16,7 +16,6 @@ class GameLaunch : public QObject {
     Q_PROPERTY(QVariantList sessions READ sessions NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
     Q_PROPERTY(QString detail READ detail NOTIFY changed)
-    Q_PROPERTY(QString joiningServerId READ joiningServerId NOTIFY changed)
     Q_PROPERTY(QVariantMap prompt READ prompt NOTIFY changed)
     Q_PROPERTY(QVariantMap crash READ crash NOTIFY changed)
     Q_PROPERTY(QVariantMap preparation READ preparation NOTIFY changed)
@@ -28,11 +27,10 @@ public:
     QVariantList sessions()const{return m_sessions;}
     QString error()const{return m_error;}
     QString detail()const{return m_detail;}
-    QString joiningServerId()const{return m_server;}
     QVariantMap prompt()const{return m_prompt;}
     QVariantMap crash()const{return m_crash;}
     QVariantMap preparation()const;
-    Q_INVOKABLE bool start(const QString& serverId=QString());
+    Q_INVOKABLE bool start();
     Q_INVOKABLE void cancel();
     Q_INVOKABLE void stop(const QString& id);
     Q_INVOKABLE void stopAll();
@@ -60,7 +58,7 @@ private:
     QByteArray m_input;
     QVariantList m_sessions;
     QVariantMap m_pending,m_prompt,m_crash,m_preparation;
-    QString m_pipe,m_error,m_detail,m_server,m_startingId;
-    bool m_starting=false,m_spawned=false,m_detaching=false,m_canceling=false;
+    QString m_pipe,m_error,m_detail,m_startingId;
+    bool m_starting=false,m_spawned=false,m_detaching=false;
     int m_attempts=0;
 };

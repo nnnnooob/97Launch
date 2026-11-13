@@ -1,8 +1,9 @@
 using System.Diagnostics;
-using System.Reflection;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Launcher.App.Services;
 
@@ -10,8 +11,7 @@ public sealed record SignedUpdateManifest(string Payload, string Signature, stri
 public sealed record UpdateArtifact(int Format, string App, string Version, int Build, string Channel,
     string Architecture, long Size, string Sha256, long IssuedAt);
 public sealed record UpdateRelease(string Id, string Version, int Build, string Channel, string Architecture,
-    long Size, string Notes, long? PublishedAt, SignedUpdateManifest Manifest, string DownloadUrl);
-public sealed record UpdateCheck(bool Available, UpdateRelease? Release);
+    long Size, string Notes, long? PublishedAt, SignedUpdateManifest Manifest);
 
 internal static class UpdateTrust
 {
@@ -23,7 +23,18 @@ internal static class UpdateTrust
 
     internal static UpdateArtifact Verify(UpdateRelease release)
     {
-        if (!Guid.TryParseExact(release.Id, "D", out _) || release.Manifest.Payload.Length > 12000 || release.Manifest.Signature.Length > 1200)
+        if (!long.TryParse(release.Id, NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id <= 0)
+            throw new InvalidDataException("GitHub 发布编号无效。");
+        var artifact = VerifyManifest(release.Manifest);
+        if (artifact.Version != release.Version || artifact.Build != release.Build || artifact.Architecture != release.Architecture
+            || artifact.Channel != release.Channel || artifact.Size != release.Size || artifact.Architecture != Architecture)
+            throw new InvalidDataException("更新版本、大小或目标架构与签名不符。");
+        return artifact;
+    }
+
+    internal static UpdateArtifact VerifyManifest(SignedUpdateManifest manifest)
+    {
+        if (manifest?.Payload is not { Length: > 0 and <= 12000 } || manifest.Signature is not { Length: > 0 and <= 1200 })
             throw new InvalidDataException("更新清单格式无效。");
         using var pem = typeof(UpdateTrust).Assembly.GetManifestResourceStream("Launcher.UpdateSigningRoot.pem")
             ?? throw new InvalidDataException("缺少更新签名公钥。");
@@ -31,18 +42,17 @@ internal static class UpdateTrust
         using var rsa = RSA.Create();
         rsa.ImportFromPem(reader.ReadToEnd());
         var keyId = Convert.ToHexString(SHA256.HashData(rsa.ExportSubjectPublicKeyInfo())).ToLowerInvariant()[..16];
-        var payload = Convert.FromBase64String(release.Manifest.Payload);
-        if (payload.Length > 8192 || release.Manifest.KeyId != keyId ||
-            !rsa.VerifyData(payload, Convert.FromBase64String(release.Manifest.Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+        var payload = Convert.FromBase64String(manifest.Payload);
+        if (payload.Length > 8192 || manifest.KeyId != keyId ||
+            !rsa.VerifyData(payload, Convert.FromBase64String(manifest.Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
             throw new InvalidDataException("更新数字签名校验失败。");
         var artifact = JsonSerializer.Deserialize<UpdateArtifact>(payload, Json) ?? throw new InvalidDataException("更新清单为空。");
-        if (artifact.Format != 1 || artifact.App != AppInfo.Name || artifact.Version != release.Version ||
-            artifact.Build != release.Build || artifact.Architecture != release.Architecture || artifact.Channel != release.Channel ||
-            artifact.Size != release.Size || artifact.Architecture != Architecture || artifact.Build is < 1 or > 65535 ||
+        if (artifact.Format != 1 || artifact.App != AppInfo.Name || artifact.Version is not { Length: > 0 and <= 100 }
+            || !Regex.IsMatch(artifact.Version, @"\A[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?\z")
+            || artifact.Architecture is not ("x64" or "arm64") || artifact.Build is < 1 or > 65535 ||
             artifact.Size is < 65536 or > 536870912 || artifact.Channel is not ("preview" or "stable") ||
-            artifact.Sha256.Length != 64 || artifact.Sha256.Any(c => !char.IsAsciiHexDigit(c)) ||
-            artifact.IssuedAt > DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds() ||
-            release.DownloadUrl != $"/api/v1/updates/{release.Id}/download")
+            artifact.Sha256 is not { Length: 64 } || artifact.Sha256.Any(c => !char.IsAsciiHexDigit(c)) ||
+            artifact.IssuedAt > DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds())
             throw new InvalidDataException("更新版本、大小或目标架构与签名不符。");
         return artifact;
     }

@@ -132,18 +132,12 @@ Item {
 
         LiteHome {
             y: 4
-            width: 284
+            width: parent.width
             height: parent.height - y
             visible: host.displayedPage === 0
             onSettingsRequested: function (path) {
                 host.settingsRequested(path);
             }
-        }
-        LiteServers {
-            x: 300
-            width: parent.width - x
-            height: parent.height
-            visible: host.displayedPage === 0
         }
         LiteRetainedLoader {
             id: instancePage

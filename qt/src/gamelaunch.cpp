@@ -66,8 +66,8 @@ GameLaunch::GameLaunch(Instances* instances,Accounts* accounts,GlobalSettings* s
 }
 GameLaunch::~GameLaunch(){detach();}
 bool GameLaunch::canLaunch()const{
-    const auto instance=m_instances->current();const auto auth=m_settings->authorization();
-    return !m_starting&&!m_accounts->busy()&&!m_flow->active()&&auth.value("authorized").toBool()
+    const auto instance=m_instances->current();
+    return !m_starting&&!m_accounts->busy()&&!m_flow->active()
         &&!instance.value("path").toString().isEmpty()&&instance.value("error").toString().isEmpty()
         &&m_accounts->current().value("usable").toBool()&&m_status->values().value("readiness")!="正在检查 Java";
 }
@@ -75,15 +75,15 @@ void GameLaunch::send(const QVariantMap& command){
     if(m_socket.state()==QLocalSocket::ConnectedState){m_socket.write(QJsonDocument(QJsonObject::fromVariantMap(command)).toJson(QJsonDocument::Compact)+'\n');m_socket.flush();}
 }
 void GameLaunch::connectHost(){m_detaching=false;m_spawned=false;m_attempts=0;m_connect.start();if(m_socket.state()==QLocalSocket::UnconnectedState)m_socket.connectToServer(m_pipe);}
-bool GameLaunch::start(const QString& serverId){
+bool GameLaunch::start(){
     if(!canLaunch())return false;
     const auto instance=m_instances->details(m_instances->current().value("path").toString());
     if(instance.isEmpty())return false;
-    m_error.clear();m_detail=serverId.isEmpty()?"正在准备启动…":"正在检查服务器状态";m_server=serverId;m_starting=true;
-    m_startingId.clear();m_canceling=false;
+    m_error.clear();m_detail="正在准备启动…";m_starting=true;
+    m_startingId.clear();
     m_preparation={{"name",instance.value("name")},{"path",instance.value("path")},{"accountType",m_accounts->current().value("typeDisplay")}};
     m_pending={{"action","start"},{"instance",instance},{"accountId",m_accounts->current().value("id")},
-        {"global",InstanceSettings::defaults()},{"serverId",serverId}};
+        {"global",InstanceSettings::defaults()}};
     if(m_socket.state()==QLocalSocket::ConnectedState){send(m_pending);m_pending.clear();}else connectHost();
     emit changed();return true;
 }
@@ -100,11 +100,11 @@ QVariantMap GameLaunch::preparation()const{
     }
     return result;
 }
-void GameLaunch::cancel(){if(m_starting){m_canceling=true;send({{"action","cancel"}});if(!m_pending.isEmpty()){m_pending.clear();m_starting=false;m_server.clear();m_connect.stop();}}m_prompt.clear();emit changed();}
+void GameLaunch::cancel(){if(m_starting){send({{"action","cancel"}});if(!m_pending.isEmpty()){m_pending.clear();m_starting=false;m_connect.stop();}}m_prompt.clear();emit changed();}
 void GameLaunch::stop(const QString& id){send({{"action","stop"},{"id",id}});}
 void GameLaunch::stopAll(){send({{"action","stopAll"}});}
 void GameLaunch::answer(bool accepted){if(m_prompt.isEmpty())return;send({{"action","answer"},{"id",m_prompt.value("id")},{"answer",accepted}});m_prompt.clear();emit changed();}
-void GameLaunch::fail(const QString& error){m_error=error;m_starting=false;m_canceling=false;m_pending.clear();m_server.clear();m_prompt.clear();emit changed();}
+void GameLaunch::fail(const QString& error){m_error=error;m_starting=false;m_pending.clear();m_prompt.clear();emit changed();}
 void GameLaunch::clearError(){m_error.clear();emit changed();}
 void GameLaunch::dismissCrash(){m_crash.clear();emit changed();}
 void GameLaunch::openLogs(const QString& path){
@@ -125,13 +125,11 @@ void GameLaunch::read(){
             m_startingId=data.value("starting").toString();
             if(data.value("preparing").toBool())m_starting=true;
         }
-        else if(type=="authorization"){if(!m_canceling)m_settings->acceptAuthorization(value);}
         else if(type=="accountRefreshed"){if(!m_accounts->acceptLaunchRefresh(value))m_error="游戏账号已刷新，但保存失败，请重新登录以保留登录状态。";}
         else if(type=="question")m_prompt=data.toVariantMap();
-        else if(type=="selectionCheck")send({{"action","selection"},{"path",m_instances->current().value("path")}});
         else if(type=="stage")m_detail=data.value("detail").toString();
         else if(type=="started"){m_detail="游戏已启动";m_instances->refresh();emit gameStarted();}
-        else if(type=="prepared"){m_starting=false;m_canceling=false;m_server.clear();m_prompt.clear();}
+        else if(type=="prepared"){m_starting=false;m_prompt.clear();}
         else if(type=="canceled"){m_detail="启动已取消";m_prompt.clear();}
         else if(type=="error"){m_error=data.value("error").toString();m_detail="启动失败";m_prompt.clear();}
         else if(type=="crash"){m_crash=value;emit crashReported();}

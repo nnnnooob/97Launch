@@ -77,11 +77,10 @@ Window {
         catalogJobs.cancel();
         resourceStateJobs.cancel();
         settingsJobs.cancel();
+        updateJobs.cancel();
         launchStatusJobs.cancel();
         instanceJavaJobs.cancel();
         dropJobs.cancel();
-        authorizationJobs.cancel();
-        serverJobs.cancel();
         if (instanceJobs.busy) {
             event.accepted = false;
             quitAfterJobs = true;
@@ -138,17 +137,6 @@ Window {
     }
     Connections {
         target: launcherFlow
-        function onHomeRequested() {
-            window.settingsShown = false;
-            window.downloadShown = false;
-            window.downloadHistory = [];
-            window.downloadDetail = ({});
-            window.detailTitle = "";
-            settingsCleanup.stop();
-            instanceSettings.close();
-            pageHost.accountView = "identity";
-            topNavigation.currentIndex = 0;
-        }
         function onActiveChanged() {
             if (launcherFlow.active) {
                 accountService.cancelLogin();
@@ -400,7 +388,7 @@ Window {
     LiteDropImport {
         anchors.fill: parent
         z: 300
-        authorized: launcherFlow.authorized
+        importEnabled: !launcherFlow.active
         onFinished: function (message, failed) { downloadToast.show(message, failed); }
     }
     Connections {

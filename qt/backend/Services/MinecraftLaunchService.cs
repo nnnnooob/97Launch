@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -29,7 +29,6 @@ public sealed class MinecraftLaunchService
     private readonly PclFileDownloadManager _downloads;
     private readonly GameSessionManager _sessions;
     private readonly ILogger<MinecraftLaunchService> _log;
-    private readonly LauncherAuthorizationService _authorization;
 
     public MinecraftLaunchService(
         JavaRuntimeService java,
@@ -39,8 +38,7 @@ public sealed class MinecraftLaunchService
         GameFolderService folders,
         PclFileDownloadManager downloads,
         GameSessionManager sessions,
-        ILogger<MinecraftLaunchService> log,
-        LauncherAuthorizationService authorization)
+        ILogger<MinecraftLaunchService> log)
     {
         _java = java;
         _accounts = accounts;
@@ -50,7 +48,6 @@ public sealed class MinecraftLaunchService
         _downloads = downloads;
         _sessions = sessions;
         _log = log;
-        _authorization = authorization;
     }
 
     public async Task<JavaRuntimeCheck> CheckInstalledJavaAsync(
@@ -71,10 +68,8 @@ public sealed class MinecraftLaunchService
         InstanceItem instance,
         IProgress<LaunchProgress> progress,
         Guid sessionId,
-        CancellationToken cancellationToken,
-        CatalogServer? server = null)
+        CancellationToken cancellationToken)
     {
-        _authorization.RequireAuthorization();
         if (instance.HasError) throw new InvalidOperationException(instance.Error ?? "实例文件异常。");
         if (!Directory.Exists(instance.Path)) throw new DirectoryNotFoundException("实例文件夹不存在。");
         if (File.Exists(InstanceModificationService.JournalPath(instance.Path)))
@@ -134,7 +129,7 @@ public sealed class MinecraftLaunchService
             memory.ModCount, Math.Min(512, memory.HeapMb), memory.HeapMb);
         progress.Report(new("准备启动参数", null));
         var start = BuildStartInfo(javaPath, instance, profiles, gameRoot, gameDirectory, nativeDirectory,
-            string.Join(Path.PathSeparator, classpath), mainClass, account, options, global, memory, server);
+            string.Join(Path.PathSeparator, classpath), mainClass, account, options, global, memory);
         _sessions.PrepareLogs(sessionId, start, gameDirectory,
             [account.AccessToken, account.RefreshToken, account.ClientToken, account.Password], memory);
         cancellationToken.ThrowIfCancellationRequested();
@@ -142,28 +137,8 @@ public sealed class MinecraftLaunchService
         progress.Report(new("应用游戏设置", null));
         await DefaultGameSettingsService.ApplyAsync(instance, gameDirectory, global.GameDefaults ?? new(), cancellationToken);
         ApplyLanguagePreference(gameDirectory, instance.MinecraftVersionId, global.AutoSetChinese);
-        if (server is not null)
-        {
-            foreach (var other in _sessions.ActiveSessions.Where(s => s.Id != sessionId))
-            {
-                var otherDirectory = other.GameDirectory;
-                if (otherDirectory is null)
-                {
-                    var otherRoot = Path.GetDirectoryName(Path.GetDirectoryName(other.InstancePath)!)!;
-                    if (GameFolderService.PathsEqual(otherRoot, gameRoot))
-                        throw new IOException($"实例「{other.InstanceName}」正在准备启动，请稍后再加入服务器。");
-                    continue;
-                }
-                if (GameFolderService.PathsEqual(otherDirectory, gameDirectory))
-                    throw new IOException($"请先关闭使用相同游戏目录的实例「{other.InstanceName}」，再加入服务器。");
-            }
-            InstanceContentService.ThrowIfBusy(gameDirectory);
-            progress.Report(new("添加多人游戏服务器", null));
-            await MinecraftServerList.AddAsync(gameDirectory, server, cancellationToken);
-        }
         cancellationToken.ThrowIfCancellationRequested();
         progress.Report(new("启动 Minecraft", null));
-        _authorization.RequireAuthorization();
         var process = Process.Start(start) ?? throw new InvalidOperationException("无法启动 Java 进程。");
         ApplyPriority(process, options.ProcessPriority);
         var ready = _sessions.Attach(sessionId, process, gameDirectory);
@@ -373,8 +348,7 @@ public sealed class MinecraftLaunchService
         Account account,
         InstanceLaunchSettings options,
         LauncherSettings global,
-        MemoryAllocationPlan memory,
-        CatalogServer? server)
+        MemoryAllocationPlan memory)
     {
         var root = profiles[0].Data;
         var assetIndex = FindObject(profiles, "assetIndex") as JsonObject;
@@ -483,39 +457,8 @@ public sealed class MinecraftLaunchService
             start.ArgumentList.Add("--height"); start.ArgumentList.Add(size.Height.ToString());
         }
         foreach (var arg in Tokenize(options.GameArgsTail)) start.ArgumentList.Add(Expand(arg, variables));
-        if (server is not null)
-        {
-            ServerCatalogService.ValidateAddress(server);
-            var quickPlay = profiles.Any(p => p.Data["arguments"]?["game"]?.ToJsonString().Contains("quickPlayMultiplayer", StringComparison.Ordinal) == true);
-            var legacyJoin = Version.TryParse(instance.MinecraftVersionId, out var version)
-                && version >= new Version(1, 6) && version < new Version(1, 20);
-            if (quickPlay || legacyJoin)
-            {
-                var joinArgs = new[] { "--server", "--port", "--quickPlayMultiplayer", "--quickPlaySingleplayer", "--quickPlayRealms", "--quickPlayPath" };
-                for (var i = 0; i < start.ArgumentList.Count; i++)
-                {
-                    if (!joinArgs.Contains(start.ArgumentList[i])) continue;
-                    start.ArgumentList.RemoveAt(i);
-                    if (i < start.ArgumentList.Count && !start.ArgumentList[i].StartsWith("--", StringComparison.Ordinal)) start.ArgumentList.RemoveAt(i);
-                    i--;
-                }
-                if (quickPlay)
-                {
-                    start.ArgumentList.Add("--quickPlayMultiplayer"); start.ArgumentList.Add(MinecraftServerList.Address(server));
-                }
-                else
-                {
-                    start.ArgumentList.Add("--server"); start.ArgumentList.Add(server.Host);
-                    start.ArgumentList.Add("--port"); start.ArgumentList.Add(server.Port.ToString());
-                }
-            }
-            else LogBufferForServerFallback(server.Name);
-        }
         return start;
     }
-
-    private static void LogBufferForServerFallback(string name) => Serilog.Log.Information(
-        "当前版本未声明直连支持，启动后请在多人游戏列表选择服务器：{Server}", name);
 
     private static List<string> BuildClasspath(InstanceItem instance, IReadOnlyList<VersionProfile> profiles, string gameRoot)
     {

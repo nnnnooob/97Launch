@@ -30,13 +30,13 @@
 /.minecraft/
 /.97Launch/
 authorization-server.json
+update-server.json
 curseforge-api-key.txt
 curseforge-key.dat
 *.key
 *.pfx
 *.p12
 *.pem
-!/backend/Resources/97launch-auth-ca.pem
 !/backend/Resources/update-signing-public.pem
 /third_party/WebView2-*/
 !/third_party/WebView2-1.0.3719.77/

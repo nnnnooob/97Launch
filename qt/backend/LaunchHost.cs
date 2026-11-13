@@ -19,7 +19,6 @@ internal static class LaunchHost
     private static readonly Dictionary<Guid, IDisposable> Leases = [];
     private static CancellationTokenSource? _launch;
     private static Task _work = Task.CompletedTask;
-    private static TaskCompletionSource<string>? _selection;
     private static Guid? _starting;
     private static bool _preparing;
     private static readonly object Gate = new();
@@ -73,7 +72,6 @@ internal static class LaunchHost
                                 break;
                             case "cancel": _launch?.Cancel(); break;
                             case "answer": DownloadInteraction.Answer(line); break;
-                            case "selection": _selection?.TrySetResult(Text(request, "path")); break;
                             case "snapshot": Snapshot(); break;
                         }
                     }
@@ -121,38 +119,12 @@ internal static class LaunchHost
             var instance = new InstanceItem(found.Name, found.Path, found.VanillaName, found.LoaderDisplay,
                 found.IsModdable, Text(entry, "icon"), found.Kind == InstanceKind.Error ? found.Info : null,
                 found.Kind is not (InstanceKind.Snapshot or InstanceKind.Old or InstanceKind.Fool), MinecraftVersionId: found.VanillaName);
-            var authorization = new LauncherAuthorizationService();
-            using var registration = token.Register(authorization.CancelPending);
-            authorization.Changed += (_, _) => { if (!token.IsCancellationRequested && !authorization.IsBusy) Program.Send(new {
-                type = "authorization", data = SettingsActions.AuthorizationState(authorization) }); };
-            token.ThrowIfCancellationRequested();
-            await authorization.InitializeAsync(); token.ThrowIfCancellationRequested(); authorization.RequireAuthorization();
             var settings = new SettingsStore(Path.Combine(AppInfo.DataDirectory, "settings.json"));
             var global = DownloadActions.EffectiveSettings(request, settings);
             global.SelectedGameFolderPath = root; settings.RequestDefaults = global;
             var local = new InstanceLaunchSettingsStore();
             var folders = new GameFolderService { Root = root };
             var accounts = new AccountManager(Text(request, "accountId"));
-            CatalogServer? server = null;
-            var serverId = Text(request, "serverId");
-            if (serverId.Length > 0)
-            {
-                Program.Send(new { type = "stage", detail = "正在检查服务器状态" });
-                server = await new ServerCatalogService(authorization, null!).GetAsync(serverId, token);
-                ServerCatalogService.ValidateAddress(server);
-                if (!server.CanJoin) throw new IOException("服务器尚未就绪或正在维护，请稍后再试。");
-                var mismatch = Version.TryParse(server.Minecraft, out var expected)
-                    && Version.TryParse(instance.MinecraftVersionId, out var actual) && expected != actual;
-                var required = Loader(server.Loader);
-                mismatch |= required.Length > 0 && required != Loader(instance.Loader);
-                if (mismatch) await DownloadInteraction.ConfirmAsync("实例可能不兼容",
-                    $"当前实例：{instance.Name}\n{instance.MinecraftVersionId} · {instance.Loader}\n\n服务器建议：{server.Minecraft} · {server.Loader}\n仍要启动并加入吗？", "继续启动", token);
-                _selection = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                Program.Send(new { type = "selectionCheck" });
-                var selected = await _selection.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
-                _selection = null;
-                if (!GameFolderService.PathsEqual(selected, path)) throw new IOException("所选实例已发生变化，请重新点击进入服务器。");
-            }
             lease = GameDirectoryLease.Acquire(MinecraftLaunchService.ResolveGameDirectory(instance, root, local.Load(path, global), global), false);
             sessionId = Sessions.Begin(instance); _starting = sessionId;
             lock (Gate) { Leases[sessionId.Value] = lease; lease = null; }
@@ -160,9 +132,9 @@ internal static class LaunchHost
             var downloads = new PclFileDownloadManager();
             var java = new JavaRuntimeService(settings, folders, downloads, new JavaRuntimeChangeNotifier());
             var launcher = new MinecraftLaunchService(java, accounts, settings, local, folders, downloads,
-                Sessions, NullLogger<MinecraftLaunchService>.Instance, authorization);
+                Sessions, NullLogger<MinecraftLaunchService>.Instance);
             var progress = new LaunchReporter(update => { Sessions.Report(sessionId.Value, update); });
-            var result = await launcher.StartAsync(instance, progress, sessionId.Value, token, server);
+            var result = await launcher.StartAsync(instance, progress, sessionId.Value, token);
             Program.Send(new { type = "started", data = result, path });
         }
         catch (OperationCanceledException)
@@ -179,14 +151,12 @@ internal static class LaunchHost
         }
         finally
         {
-            lease?.Dispose(); _selection = null;
+            lease?.Dispose();
             if (sessionId is { } id) Sessions.EndBeforeProcess(id);
             _starting = null; _preparing = false; Snapshot();
             Program.Send(new { type = "prepared", failed = crashed });
         }
     }
-    private static string Loader(string value) => new[] { "neoforge", "fabric", "quilt", "forge" }
-        .FirstOrDefault(name => value.Contains(name, StringComparison.OrdinalIgnoreCase)) ?? "";
     private sealed class LaunchReporter(Action<LaunchProgress> report) : IProgress<LaunchProgress>
     { public void Report(LaunchProgress value) => report(value); }
 }

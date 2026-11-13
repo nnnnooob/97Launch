@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 project(97LaunchQt VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(LAUNCH_BUILD_NUMBER 0 CACHE STRING "Signed release build number")
-set(LAUNCH_VERSION_SUFFIX "alpha.7" CACHE STRING "Release suffix")
+set(LAUNCH_VERSION_SUFFIX "alpha.8" CACHE STRING "Release suffix")
 set(LAUNCH_RELEASE_VERSION "${PROJECT_VERSION}-${LAUNCH_VERSION_SUFFIX}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -11,7 +11,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 find_package(Qt6 6.6.3 EXACT REQUIRED COMPONENTS Quick Network Concurrent)
-qt_add_executable(97LaunchQt WIN32 src/gamelaunch.cpp src/gamelaunch.h src/servercatalog.cpp src/servercatalog.h src/launcherflow.cpp src/launcherflow.h src/main.cpp src/accounts.cpp src/accounts.h src/authbrowser.cpp src/authbrowser.h src/instances.cpp src/instances.h src/instancesettings.cpp src/instancesettings.h src/instancejobs.cpp src/instancejobs.h src/globalsettings.cpp src/globalsettings.h src/launchstatus.cpp src/launchstatus.h)
+qt_add_executable(97LaunchQt WIN32 src/gamelaunch.cpp src/gamelaunch.h src/launcherflow.cpp src/launcherflow.h src/main.cpp src/accounts.cpp src/accounts.h src/authbrowser.cpp src/authbrowser.h src/instances.cpp src/instances.h src/instancesettings.cpp src/instancesettings.h src/instancejobs.cpp src/instancejobs.h src/globalsettings.cpp src/globalsettings.h src/launchstatus.cpp src/launchstatus.h)
 target_sources(97LaunchQt PRIVATE src/webviewruntime.cpp src/webviewruntime.h)
 qt_add_resources(97LaunchQt "basic_ui" PREFIX "/" FILES
     qml/components/LiteWelcomeFlow.qml
@@ -71,7 +71,6 @@ qt_add_resources(97LaunchQt "basic_ui" PREFIX "/" FILES
     qml/components/LiteInstanceSidebar.qml
     qml/components/LiteMenuItem.qml
     qml/components/LiteTopNavigation.qml
-    qml/components/LiteServers.qml
     qml/components/LiteAccountPane.qml
     qml/components/LitePageHost.qml
     qml/components/AccountDialogs.qml

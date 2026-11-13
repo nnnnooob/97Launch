@@ -17,7 +17,6 @@ class GlobalSettings : public QObject {
     Q_PROPERTY(QVariantMap selectedJava READ selectedJava NOTIFY changed)
     Q_PROPERTY(bool javaBusy READ javaBusy NOTIFY changed)
     Q_PROPERTY(QString javaStatus READ javaStatus NOTIFY changed)
-    Q_PROPERTY(QVariantMap authorization READ authorization NOTIFY changed)
     Q_PROPERTY(QVariantMap updates READ updates NOTIFY changed)
 public:
     GlobalSettings(Instances* instances, QObject* parent=nullptr);
@@ -28,21 +27,16 @@ public:
     QString dataDirectory() const;
     QString logDirectory() const;
     QString version() const;
-    void attachJobs(InstanceJobs* reader,InstanceJobs* transfers,InstanceJobs* authorization);
+    void attachJobs(InstanceJobs* reader,InstanceJobs* transfers,InstanceJobs* updater);
     QVariantList javaRuntimes()const{return m_java;}
     QVariantMap selectedJava()const;
     bool javaBusy()const{return m_javaBusy;}
     QString javaStatus()const{return m_javaStatus;}
-    QVariantMap authorization()const{return m_authorization;}
     QVariantMap updates()const{return m_updates;}
-    void acceptAuthorization(const QVariantMap& state);
     Q_INVOKABLE void refreshJava();
     Q_INVOKABLE void addJava(const QUrl& file);
     Q_INVOKABLE bool removeJava(const QString& path = QString());
     Q_INVOKABLE void readPreset(const QString& instancePath);
-    Q_INVOKABLE void authorizationAction(const QString& action);
-    Q_INVOKABLE void pairDevice(const QString& token);
-    Q_INVOKABLE void cancelAuthorization();
     Q_INVOKABLE void updateAction(const QString& action);
     Q_INVOKABLE void configureUpdates(const QString& channel,bool startupCheck);
     Q_INVOKABLE bool setOption(const QString& key,const QVariant& value);
@@ -63,7 +57,6 @@ signals:
     void restartRequested();
     void transferRequested();
     void keyCaptured(const QString& key);
-    void authorizationResolved(const QString& action);
     void updatesResolved(const QString& action);
     void javaResolved(bool success);
 protected:
@@ -77,9 +70,9 @@ private:
     bool m_captureKey=false;
     Instances* m_instances;
     QTimer m_timer;
-    InstanceJobs *m_reader=nullptr,*m_transfers=nullptr,*m_authorizationJobs=nullptr;
+    InstanceJobs *m_reader=nullptr,*m_transfers=nullptr,*m_updater=nullptr;
     QVariantList m_java;
-    QVariantMap m_authorization,m_updates;
+    QVariantMap m_updates;
     bool m_javaBusy=false;
     QString m_javaStatus="尚未搜索 Java";
 };

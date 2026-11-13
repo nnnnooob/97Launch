@@ -66,8 +66,6 @@ internal static class DownloadActions {
         var content = new InstanceContentService(settings, local, new GameSessionManager());
         var mods = new ModInstallService(resources, content, installer);
         var progress = new ProgressSink();
-        if(action is "downloadServerList" or "downloadServerPack" or "downloadServerInstall")
-            return await ServerActions.RunAsync(request,new LocalModpackService(installer,curseForge,local,settings),progress,token);
         InstanceContext Context() {
             var entry = request["instance"] ?? throw new IOException("请先选择安装目标。");
             var path = Path.GetFullPath(Text(entry, "path"));

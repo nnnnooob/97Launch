@@ -1,8 +1,7 @@
-﻿param(
+param(
     [string]$QtSdk = '',
     [int]$BuildNumber = 0,
-    [string]$VersionSuffix = 'alpha.7',
-    [string]$AuthorizationConfigPath = '',
+    [string]$VersionSuffix = 'alpha.8',
     [string]$CurseForgeApiKeyPath = '',
     [switch]$Run
 )
@@ -24,17 +23,9 @@ $workerPath = Join-Path $PSScriptRoot 'worker\97Launch.InstanceWorker.exe'
 if (Get-Process -Name 97Launch.InstanceWorker -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $workerPath }) {
     throw 'An instance task is running. Let it finish or cancel it in the app before rebuilding.'
 }
-if (!$AuthorizationConfigPath) {
-    $AuthorizationConfigPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'authorization-server.json'
-    if (!(Test-Path -LiteralPath $AuthorizationConfigPath)) { $AuthorizationConfigPath = Join-Path (Split-Path $PSScriptRoot -Parent) '97Launch/authorization-server.json' }
-}
-if (!(Test-Path -LiteralPath $AuthorizationConfigPath)) { throw 'Provide -AuthorizationConfigPath for this deployment.' }
 if (!$CurseForgeApiKeyPath) { $CurseForgeApiKeyPath = Join-Path $env:USERPROFILE '.97launch-private/curseforge-api-key.txt' }
-& dotnet publish (Join-Path $PSScriptRoot 'backend\InstanceWorker.csproj') -c Release -o (Join-Path $PSScriptRoot 'worker') "-p:AuthorizationConfigPath=$AuthorizationConfigPath" "-p:CurseForgeApiKeyPath=$CurseForgeApiKeyPath" --nologo
+& dotnet publish (Join-Path $PSScriptRoot 'backend\InstanceWorker.csproj') -c Release -o (Join-Path $PSScriptRoot 'worker') "-p:CurseForgeApiKeyPath=$CurseForgeApiKeyPath" --nologo
 if ($LASTEXITCODE) { throw 'Instance worker build failed.' }
-if (!(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'worker\authorization-server.json') -PathType Leaf)) {
-    throw 'Authorization server configuration was not deployed. Provide ../97Launch/authorization-server.json before building.'
-}
 Get-Process -Name 97LaunchQt -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $PSScriptRoot '97LaunchQt.exe') } | Stop-Process
 & $cmake -S . -B build-basic -G 'Visual Studio 17 2022' -A x64 "-DCMAKE_PREFIX_PATH=$QtSdk" "-DLAUNCH_BUILD_NUMBER=$BuildNumber" "-DLAUNCH_VERSION_SUFFIX=$VersionSuffix"
 if ($LASTEXITCODE) { throw 'CMake configuration failed.' }
@@ -46,7 +37,8 @@ New-Item -ItemType Directory -Force -Path (Join-Path $deployQml 'components') | 
 Copy-Item -LiteralPath qml\Main.qml -Destination $deployQml -Force
 Remove-Item -LiteralPath (Join-Path $deployQml 'components\LiteNavigation.qml') -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $deployQml 'components\LiteSidebarMenu.qml') -ErrorAction SilentlyContinue
-Copy-Item -LiteralPath qml\components\LiteWelcomeFlow.qml,qml\components\LiteRetainedLoader.qml,qml\components\LiteFilterChips.qml,qml\components\LiteSlider.qml,qml\components\LiteRadioButton.qml,qml\components\LiteSpinBox.qml,qml\components\LiteSettingsScroll.qml,qml\components\LiteSettingRow.qml,qml\components\LiteSettingsField.qml,qml\components\LiteSettingsNote.qml,qml\components\LiteGlobalLaunch.qml,qml\components\LiteGlobalManage.qml,qml\components\LiteGlobalJava.qml,qml\components\LiteGlobalDefaults.qml,qml\components\LiteGlobalAbout.qml,qml\components\LiteGlobalUpdate.qml,qml\components\LiteGlobalSettingsPage.qml,qml\components\LiteGlobalSettingsSidebar.qml,qml\components\LiteListGroupHeader.qml,qml\components\LiteListGroupRow.qml,qml\components\LiteEditableComboBox.qml,qml\components\LiteDownloadSidebar.qml,qml\components\LiteDownloadPage.qml,qml\components\LiteDownloadDetail.qml,qml\components\LiteTransferSummary.qml,qml\components\LiteBackToTop.qml,qml\components\LiteComboBox.qml,qml\components\LiteCheckBox.qml,qml\components\LiteSettingsCard.qml,qml\components\LitePopupTransition.qml,qml\components\LitePopup.qml,qml\components\LiteToast.qml,qml\components\LiteDropImport.qml,qml\components\LiteFlyout.qml,qml\components\LiteMenu.qml,qml\components\LiteToolTip.qml,qml\components\LiteConfirmDialog.qml,qml\components\LiteInstanceSettingsSidebar.qml,qml\components\LiteInstanceSettingsPage.qml,qml\components\LiteInstanceModify.qml,qml\components\LiteInstanceExport.qml,qml\components\LiteInstanceContent.qml,qml\components\LiteResourceBrowser.qml,qml\components\LiteTransferPage.qml,qml\components\WindowButton.qml,qml\components\LiteButton.qml,qml\components\LiteIconButton.qml,qml\components\LiteMotion.js,qml\components\LiteInstanceRules.js,qml\components\LiteTextField.qml,qml\components\LiteHome.qml,qml\components\LiteInstancesPage.qml,qml\components\LiteInstanceSidebar.qml,qml\components\LiteMenuItem.qml,qml\components\LiteTopNavigation.qml,qml\components\LiteServers.qml,qml\components\LiteAccountPane.qml,qml\components\LitePageHost.qml,qml\components\AccountDialogs.qml,qml\components\AccountHead.qml -Destination (Join-Path $deployQml 'components') -Force
+Remove-Item -LiteralPath (Join-Path $deployQml 'components\LiteServers.qml') -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath qml\components\LiteWelcomeFlow.qml,qml\components\LiteRetainedLoader.qml,qml\components\LiteFilterChips.qml,qml\components\LiteSlider.qml,qml\components\LiteRadioButton.qml,qml\components\LiteSpinBox.qml,qml\components\LiteSettingsScroll.qml,qml\components\LiteSettingRow.qml,qml\components\LiteSettingsField.qml,qml\components\LiteSettingsNote.qml,qml\components\LiteGlobalLaunch.qml,qml\components\LiteGlobalManage.qml,qml\components\LiteGlobalJava.qml,qml\components\LiteGlobalDefaults.qml,qml\components\LiteGlobalAbout.qml,qml\components\LiteGlobalUpdate.qml,qml\components\LiteGlobalSettingsPage.qml,qml\components\LiteGlobalSettingsSidebar.qml,qml\components\LiteListGroupHeader.qml,qml\components\LiteListGroupRow.qml,qml\components\LiteEditableComboBox.qml,qml\components\LiteDownloadSidebar.qml,qml\components\LiteDownloadPage.qml,qml\components\LiteDownloadDetail.qml,qml\components\LiteTransferSummary.qml,qml\components\LiteBackToTop.qml,qml\components\LiteComboBox.qml,qml\components\LiteCheckBox.qml,qml\components\LiteSettingsCard.qml,qml\components\LitePopupTransition.qml,qml\components\LitePopup.qml,qml\components\LiteToast.qml,qml\components\LiteDropImport.qml,qml\components\LiteFlyout.qml,qml\components\LiteMenu.qml,qml\components\LiteToolTip.qml,qml\components\LiteConfirmDialog.qml,qml\components\LiteInstanceSettingsSidebar.qml,qml\components\LiteInstanceSettingsPage.qml,qml\components\LiteInstanceModify.qml,qml\components\LiteInstanceExport.qml,qml\components\LiteInstanceContent.qml,qml\components\LiteResourceBrowser.qml,qml\components\LiteTransferPage.qml,qml\components\WindowButton.qml,qml\components\LiteButton.qml,qml\components\LiteIconButton.qml,qml\components\LiteMotion.js,qml\components\LiteInstanceRules.js,qml\components\LiteTextField.qml,qml\components\LiteHome.qml,qml\components\LiteInstancesPage.qml,qml\components\LiteInstanceSidebar.qml,qml\components\LiteMenuItem.qml,qml\components\LiteTopNavigation.qml,qml\components\LiteAccountPane.qml,qml\components\LitePageHost.qml,qml\components\AccountDialogs.qml,qml\components\AccountHead.qml -Destination (Join-Path $deployQml 'components') -Force
 & (Join-Path $QtSdk 'bin\windeployqt.exe') --release --qmldir $deployQml --no-translations --no-opengl-sw --no-compiler-runtime --dir $PSScriptRoot (Join-Path $PSScriptRoot '97LaunchQt.exe')
 if ($LASTEXITCODE) { throw 'Qt runtime deployment failed.' }
 Copy-Item -LiteralPath $webpPlugin -Destination (Join-Path $PSScriptRoot 'imageformats\qwebp.dll') -Force

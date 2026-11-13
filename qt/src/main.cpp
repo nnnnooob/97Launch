@@ -25,7 +25,6 @@
 #include "webviewruntime.h"
 #include "launchstatus.h"
 #include "gamelaunch.h"
-#include "servercatalog.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -180,15 +179,13 @@ int main(int argc, char** argv)
     InstanceJobs catalogJobs(&instances, &instanceSettings);
     InstanceJobs resourceStateJobs(&instances, &instanceSettings);
     InstanceJobs settingsJobs(&instances, &instanceSettings);
-    InstanceJobs authorizationJobs(&instances, &instanceSettings);
+    InstanceJobs updateJobs(&instances, &instanceSettings);
     GlobalSettings globalSettings(&instances);
-    globalSettings.attachJobs(&settingsJobs, &instanceJobs, &authorizationJobs);
+    globalSettings.attachJobs(&settingsJobs, &instanceJobs, &updateJobs);
     InstanceJobs runtimeJobs(&instances, &instanceSettings);
     WebViewRuntime webViewRuntime(&runtimeJobs);
     accounts.attachWebViewRuntime(&webViewRuntime);
     LauncherFlow launcherFlow(&globalSettings, &instances, &accounts, &webViewRuntime);
-    InstanceJobs serverJobs(&instances, &instanceSettings);
-    ServerCatalog serverCatalog(&instances, &globalSettings, &launcherFlow, &serverJobs, &instanceJobs);
     InstanceJobs launchStatusJobs(&instances, &instanceSettings);
     InstanceJobs instanceJavaJobs(&instances, &instanceSettings);
     instanceSettings.attachJavaJobs(&instanceJavaJobs);
@@ -207,11 +204,9 @@ int main(int argc, char** argv)
     engine.rootContext()->setContextProperty("catalogJobs", &catalogJobs);
     engine.rootContext()->setContextProperty("resourceStateJobs", &resourceStateJobs);
     engine.rootContext()->setContextProperty("settingsJobs", &settingsJobs);
+    engine.rootContext()->setContextProperty("updateJobs", &updateJobs);
     engine.rootContext()->setContextProperty("globalSettings", &globalSettings);
     engine.rootContext()->setContextProperty("launcherFlow", &launcherFlow);
-    engine.rootContext()->setContextProperty("serverCatalog", &serverCatalog);
-    engine.rootContext()->setContextProperty("serverJobs", &serverJobs);
-    engine.rootContext()->setContextProperty("authorizationJobs", &authorizationJobs);
     engine.rootContext()->setContextProperty("launchStatusJobs", &launchStatusJobs);
     engine.rootContext()->setContextProperty("instanceJavaJobs", &instanceJavaJobs);
     engine.rootContext()->setContextProperty("launchStatus", &launchStatus);
@@ -239,7 +234,8 @@ int main(int argc, char** argv)
     window->show();
     const auto ticket=app.arguments().indexOf("--update-ticket");
     if(ticket>=0&&ticket+1<app.arguments().size())
-        authorizationJobs.settings("settingsAcknowledge",{{"ticket",app.arguments()[ticket+1]}});
+        updateJobs.settings("settingsAcknowledge",{{"ticket",app.arguments()[ticket+1]}});
+    updateJobs.settings("settingsUpdateState",{{"startupTicket",ticket>=0}});
     return app.exec();
 }
 

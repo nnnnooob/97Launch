@@ -12,29 +12,11 @@
 #include <QSaveFile>
 #include <QTemporaryFile>
 #include <QUrl>
+#include <QTimer>
 #include <QDebug>
 
 LauncherFlow::LauncherFlow(GlobalSettings* settings,Instances* instances,Accounts* accounts,WebViewRuntime* runtime,QObject* parent)
     :QObject(parent),m_settings(settings),m_instances(instances),m_accounts(accounts),m_runtime(runtime){
-    m_verification.setInterval(15*60*1000);
-    connect(&m_verification,&QTimer::timeout,this,[this]{m_settings->authorizationAction("verify");});
-    connect(settings,&GlobalSettings::authorizationResolved,this,[this](const QString&){
-        const auto status=m_settings->authorization().value("status").toString();
-        const bool wasAuthorized=m_authorized;
-        m_initialized=true;m_authorized=status=="Authorized"||status=="Offline";
-        if(m_authorized){
-            if(!wasAuthorized)emit homeRequested();
-            m_verification.start();
-            if(m_view=="pairing"){
-                if(m_startup)prepareStartup();else enterMain();
-            }
-        }else{
-            m_preparationBusy=false;
-            m_verification.stop();
-            if(!m_active||m_view!="update"){setView("pairing");setActive(true);}
-        }
-        emit changed();
-    });
     connect(instances,&Instances::changed,this,[this]{
         if(!m_preparationBusy||m_preparationStep!=1||m_instances->loading())return;
         int count=0;for(const auto& folder:m_instances->folders())count+=folder.toMap().value("count").toInt();
@@ -55,42 +37,9 @@ LauncherFlow::LauncherFlow(GlobalSettings* settings,Instances* instances,Account
         if(!success){failPreparation(m_runtime->error());return;}
         prepareAvatar();
     });
-    connect(settings,&GlobalSettings::updatesResolved,this,[this](const QString& action){
-        if(action=="settingsUpdateState"){
-            m_updateStateReady=true;
-            if(m_startup&&m_authorized&&m_view=="pairing")prepareStartup();
-        }
-        if(action=="settingsUpdateCheck"&&m_waitingStartupCheck){
-            m_waitingStartupCheck=false;
-            const auto state=m_settings->updates();
-            if(state.value("error").toString().isEmpty()&&state.value("latest").toMap().isEmpty()&&!state.value("ready").toBool()){
-                QTimer::singleShot(350,this,[this]{if(!m_manualUpdate&&m_active&&m_view=="update"&&m_authorized)continueFromUpdates();});
-            }
-        }
-    });
-    QTimer::singleShot(0,this,[this]{m_settings->authorizationAction("verify");});
+    QTimer::singleShot(0,this,&LauncherFlow::enterMain);
 }
 void LauncherFlow::setActive(bool active){if(m_active==active)return;m_active=active;emit activeChanged();}
-void LauncherFlow::setView(const QString& view){if(m_view==view)return;m_view=view;emit changed();}
-void LauncherFlow::prepareStartup(){
-    if(!m_updateStateReady)return;
-    const auto state=m_settings->updates();
-    if(state.value("startupCheck",true).toBool()){
-        m_manualUpdate=false;m_waitingStartupCheck=true;setView("update");m_settings->updateAction("startup");
-    }else if(state.value("ready").toBool())setView("update");
-    else enterMain();
-}
-void LauncherFlow::openUpdates(bool check){
-    m_manualUpdate=true;m_waitingStartupCheck=false;setView("update");setActive(true);
-    if(check)m_settings->updateAction("check");
-}
-void LauncherFlow::openPairing(){setView("pairing");setActive(true);}
-void LauncherFlow::continueFromUpdates(){
-    if(m_settings->updates().value("busy").toBool())return;
-    m_waitingStartupCheck=false;
-    if(m_authorized)enterMain();
-    else setView("pairing");
-}
 QVariantList LauncherFlow::preparationSteps()const{
     const QStringList labels{"检查本地数据","扫描游戏实例","检查 Java 环境","准备头像与登录环境"};
     QVariantList rows;
@@ -98,23 +47,22 @@ QVariantList LauncherFlow::preparationSteps()const{
     return rows;
 }
 void LauncherFlow::enterMain(){
-    if(!m_authorized)return;
     if(!m_preparationDone){
         QFile marker(m_settings->dataDirectory()+"/startup-v1.json");
         if(marker.open(QIODevice::ReadOnly)&&marker.size()<=4096)
             m_preparationDone=QJsonDocument::fromJson(marker.readAll()).object().value("schema").toInt()==1;
     }
     if(!m_preparationDone){retryPreparation();return;}
-    m_startup=false;setActive(false);
+    setActive(false);
 }
 void LauncherFlow::retryPreparation(){
-    if(!m_authorized||m_preparationBusy)return;
+    if(m_preparationBusy)return;
     m_preparationStep=m_preparationCompleted=0;m_preparationBusy=true;m_preparationError.clear();
-    m_preparationDetail="正在准备本地环境…";setView("preparation");setActive(true);emit changed();
+    m_preparationDetail="正在准备本地环境…";setActive(true);emit changed();
     QTimer::singleShot(0,this,&LauncherFlow::runPreparationStep);
 }
 void LauncherFlow::runPreparationStep(){
-    if(!m_authorized||!m_preparationBusy)return;
+    if(!m_preparationBusy)return;
     m_stepTime.start();
     if(m_preparationStep==4){
         m_preparationDone=true;m_preparationBusy=false;m_preparationDetail="准备完成，正在打开主界面…";
@@ -155,6 +103,6 @@ void LauncherFlow::prepareAvatar(){
     finishPreparationStep(!m_runtime->available()?"头像已就绪，微软登录时可重试安装 WebView2":ready?"头像预览与登录环境已就绪":"已准备兼容头像，可继续使用启动器");
 }
 void LauncherFlow::skipPreview(){
-    if(!m_authorized||!canSkipPreview())return;
+    if(!canSkipPreview())return;
     m_preparationBusy=true;m_preparationError.clear();prepareAvatar();
 }

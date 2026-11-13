@@ -3,80 +3,6 @@ import QtQuick
 LiteSettingsScroll {
     id: page
     readonly property var options: globalSettings.values
-    readonly property var authorization: globalSettings.authorization
-    readonly property var statusLabels: ({
-            Authorized: "已授权",
-            NetworkRequired: "等待验证",
-            Unpaired: "未配对",
-            Offline: "离线可用",
-            Revoked: "已撤销",
-            Checking: "正在验证"
-        })
-    Component.onCompleted: globalSettings.authorizationAction("load")
-    LiteSettingsCard {
-        Item {
-            width: parent.width
-            height: 24
-            Text {
-                text: "启动器授权"
-                color: "#454d59"
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
-            }
-            Rectangle {
-                anchors.right: parent.right
-                width: badge.implicitWidth + 16
-                height: 23
-                radius: 6
-                color: "#edf0f4"
-                Text {
-                    id: badge
-                    anchors.centerIn: parent
-                    text: page.authorization.busy ? "正在验证" : page.statusLabels[page.authorization.status] || "未配对"
-                    color: "#778292"
-                    font.pixelSize: 11
-                }
-            }
-        }
-        Text {
-            width: parent.width
-            text: page.authorization.owner || "此设备尚未配对"
-            color: "#454d59"
-            font.pixelSize: 13
-            wrapMode: Text.Wrap
-        }
-        LiteSettingsNote {
-            visible: !!text
-            text: page.authorization.details || ""
-        }
-        LiteSettingsNote {
-            visible: !!text
-            text: page.authorization.message || ""
-        }
-        Row {
-            spacing: 10
-            LiteButton {
-                height: 32
-                text: page.authorization.hasCredential ? "重新验证" : "配对设备"
-                enabled: !page.authorization.busy
-                onClicked: {
-                    if (page.authorization.hasCredential)
-                        globalSettings.authorizationAction("verify");
-                    else
-                        launcherFlow.openPairing();
-                }
-            }
-            LiteButton {
-                height: 32
-                text: "退出本机授权"
-                enabled: !!page.authorization.hasCredential && !page.authorization.busy
-                onClicked: logout.open()
-            }
-        }
-        LiteSettingsNote {
-            text: "此授权用于访问启动器；Minecraft 游戏账号在左上角单独管理。"
-        }
-    }
     LiteSettingsCard {
         title: "游戏资源获取偏好"
         LiteSettingsField {
@@ -157,12 +83,5 @@ LiteSettingsScroll {
             checked: page.options.AutoSetChinese
             onClicked: globalSettings.setOption("AutoSetChinese", checked)
         }
-    }
-    LiteConfirmDialog {
-        id: logout
-        heading: "退出本机授权"
-        message: "退出后，此设备需要重新配对才能访问启动器授权服务。"
-        confirmText: "退出授权"
-        onConfirmed: globalSettings.authorizationAction("logout")
     }
 }

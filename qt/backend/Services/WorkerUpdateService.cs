@@ -2,8 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 namespace Launcher.App.Services;
-internal sealed class WorkerUpdateService(LauncherAuthorizationService authorization, SettingsStore settings) {
-    private readonly LauncherAuthorizationService _authorization=authorization;
+internal sealed class WorkerUpdateService(SettingsStore settings) {
     private readonly SettingsStore _settings=settings;
     private sealed record Preferences(string Channel="preview",bool CheckOnStartup=true);
     private Preferences _preferences=new();
@@ -26,11 +25,12 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
         try {
             if(File.Exists(LatestPath)){
                 Latest=JsonSerializer.Deserialize<UpdateRelease>(await File.ReadAllTextAsync(LatestPath,token),UpdateTrust.Json);
+                if (Latest is not null && Guid.TryParseExact(Latest.Id, "D", out _)) Latest = null;
                 if(Latest is not null){UpdateTrust.Verify(Latest);if(Latest.Build<=AppInfo.BuildNumber||(_preferences.Channel=="stable"&&Latest.Channel!="stable"))Latest=null;}
             }
             if(File.Exists(ReadyPath)){
                 var ready=JsonSerializer.Deserialize<UpdateRelease>(await File.ReadAllTextAsync(ReadyPath,token),UpdateTrust.Json);
-                if(ready is not null&&ready.Build>AppInfo.BuildNumber&&(_preferences.Channel=="preview"||ready.Channel=="stable")) {await UpdateTrust.VerifyFileAsync(ready,UpdateTrust.FilePath(ready),token);Ready=Latest=ready;Status="更新已下载，等待重启";}
+                if(ready is not null&&!Guid.TryParseExact(ready.Id, "D", out _)&&ready.Build>AppInfo.BuildNumber&&(_preferences.Channel=="preview"||ready.Channel=="stable")) {await UpdateTrust.VerifyFileAsync(ready,UpdateTrust.FilePath(ready),token);Ready=Latest=ready;Status="更新已下载，等待重启";}
                 else DeleteCacheFile(ReadyPath);
             }
         }
@@ -55,24 +55,24 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
         _preferences=new(channel,startup);UpdateTrust.Save(PreferencesPath,_preferences);
     }
     public async Task CheckAsync(CancellationToken token,bool silent=false){
-        using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(25));
-        using var response=await _authorization.SendUpdateRequestAsync($"/api/v1/updates/check?channel={_preferences.Channel}&architecture={UpdateTrust.Architecture}&build={AppInfo.BuildNumber}",timeout.Token);
-        response.EnsureSuccessStatusCode();var check=await ReadAsync<UpdateCheck>(response,timeout.Token);
-        if(check.Release is not null)UpdateTrust.Verify(check.Release);
-        Latest=check.Available?check.Release:null;
+        using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(45));
+        UpdateRelease? published;
+        try { published = await GitHubUpdateSource.LatestAsync(_preferences.Channel, timeout.Token); }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested) { throw new TimeoutException("连接 GitHub 检查更新超时，请重试。"); }
+        Latest = published is { Build: var build } && build > AppInfo.BuildNumber ? published : null;
         if(Latest is not null&&silent&&File.Exists(UpdateBootstrap.FailedBuildPath)&&
             JsonSerializer.Deserialize<int>(await File.ReadAllTextAsync(UpdateBootstrap.FailedBuildPath,token))==Latest.Build){
             Latest=null;DeleteCacheFile(LatestPath);Status="已跳过上次启动失败的构建";Detail="可以手动检查后重试，或等待后续版本。";return;
         }
         if(Latest is not null)UpdateTrust.Save(LatestPath,Latest);else DeleteCacheFile(LatestPath);
-        if(Ready is not null&&Ready.Id!=check.Release?.Id){Ready=null;DeleteCacheFile(ReadyPath);}
-        Status=Ready is not null?"更新已下载，等待重启":Latest is not null?"发现新版本":check.Release is null?"当前通道尚未发布版本":"已是当前通道的最新版本";
+        if(Ready is not null&&Ready.Id!=published?.Id){Ready=null;DeleteCacheFile(ReadyPath);}
+        Status=Ready is not null?"更新已下载，等待重启":Latest is not null?"发现新版本":published is null?"当前通道尚未发布版本":"已是当前通道的最新版本";
         Detail=Latest is {} release?$"v{release.Version} · 构建 {release.Build} · {release.Size/1048576d:0.0} MiB":"检查时间："+DateTime.Now.ToString("HH:mm:ss");
     }
     public async Task ApplyAsync(int parentId,CancellationToken token){
         var release=Ready??throw new IOException("尚无校验通过的更新，请先下载更新。");
         using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(25));
-        release=await PublishedAsync(release,timeout.Token);
+        release=await GitHubUpdateSource.PublishedAsync(release,timeout.Token);
         if(release.Build<=AppInfo.BuildNumber)throw new InvalidOperationException("此更新不高于当前构建，请重新检查。");
         UpdateBootstrap.HostParentId=int.TryParse(Environment.GetEnvironmentVariable("LAUNCH_PORTABLE_PID"),out var portablePid)?portablePid:parentId;
         await UpdateBootstrap.PrepareAsync(release);
@@ -83,8 +83,8 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
         Busy = Downloading = true; Ready = null; Status = "正在下载更新"; Notify();
         try
         {
-            release = await PublishedAsync(release, token);
-            var artifact = UpdateTrust.Verify(release);
+            release = await GitHubUpdateSource.PublishedAsync(release, token);
+            UpdateTrust.Verify(release);
             var path = UpdateTrust.FilePath(release);
             var part = path + ".part";
             Directory.CreateDirectory(UpdateTrust.Root);
@@ -95,7 +95,7 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
                 {
                     var offset = File.Exists(part) ? new FileInfo(part).Length : 0;
                     if (offset == release.Size) break;
-                    using var response = await _authorization.SendUpdateRequestAsync(release.DownloadUrl, token, offset, '"' + artifact.Sha256 + '"');
+                    using var response = await GitHubUpdateSource.OpenExecutableAsync(release, offset, token);
                     response.EnsureSuccessStatusCode();
                     if (response.StatusCode == HttpStatusCode.PartialContent)
                     {
@@ -104,7 +104,7 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
                     }
                     else if (response.StatusCode == HttpStatusCode.OK) offset = 0;
                     else throw new InvalidDataException("更新下载响应无效。");
-                    if (response.Content.Headers.ContentLength != release.Size - offset) throw new InvalidDataException("更新下载长度不符。");
+                    if (response.Content.Headers.ContentLength is { } length && length != release.Size - offset) throw new InvalidDataException("更新下载长度不符。");
                     await using var input = await response.Content.ReadAsStreamAsync(token);
                     await using var output = new FileStream(part, offset == 0 ? FileMode.Create : FileMode.Append, FileAccess.Write, FileShare.Read, 65536, true);
                     var watch = Stopwatch.StartNew(); var received = offset; var initial = offset;
@@ -139,32 +139,12 @@ internal sealed class WorkerUpdateService(LauncherAuthorizationService authoriza
             Status = "正在校验更新"; progress.Report(new(1, 0, "校验签名、哈希与程序版本")); Notify();
             try { await UpdateTrust.VerifyFileAsync(release, part, token); }
             catch (InvalidDataException) { File.Delete(part); throw; }
-            release = await PublishedAsync(release, token);
+            release = await GitHubUpdateSource.PublishedAsync(release, token);
             File.Move(part, path, true); UpdateTrust.Save(ReadyPath, release);
             Ready = Latest = release; Status = "更新已下载，等待重启"; Detail = $"v{release.Version} · 构建 {release.Build}";
             progress.Report(new(1, 1, "校验通过，点击重启并更新"));
         }
         finally { Busy = Downloading = false; Notify(); }
-    }
-
-    private async Task<UpdateRelease> PublishedAsync(UpdateRelease release, CancellationToken token)
-    {
-        using var response = await _authorization.SendUpdateRequestAsync("/api/v1/updates/" + release.Id, token);
-        if (response.StatusCode is HttpStatusCode.Gone or HttpStatusCode.NotFound) throw new InvalidOperationException("该版本已撤回，请重新检查更新。");
-        response.EnsureSuccessStatusCode();
-        var current = await ReadAsync<UpdateRelease>(response, token); UpdateTrust.Verify(current);
-        if (current.Id != release.Id || current.Manifest != release.Manifest) throw new InvalidDataException("发布清单发生变化，请重新检查更新。");
-        return current;
-    }
-
-    private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken token)
-    {
-        if (response.Content.Headers.ContentLength > 32768) throw new InvalidDataException("更新元数据过大。");
-        using var body = new MemoryStream();
-        await using var stream = await response.Content.ReadAsStreamAsync(token);
-        var buffer = new byte[4096];
-        while (true) { var n = await stream.ReadAsync(buffer, token); if (n == 0) break; if (body.Length + n > 32768) throw new InvalidDataException("更新元数据过大。"); body.Write(buffer, 0, n); }
-        return JsonSerializer.Deserialize<T>(body.ToArray(), UpdateTrust.Json) ?? throw new InvalidDataException("更新元数据为空。");
     }
 
     private static void Cleanup(){

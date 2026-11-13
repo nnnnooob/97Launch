@@ -103,12 +103,6 @@ void GlobalSettings::setActive(bool active){if(active){updateMemory();m_timer.st
 void GlobalSettings::updateMemory(){const auto instance=m_instances->current();auto effective=instance.isEmpty()?m_values:InstanceSettings::read(instance.value("path").toString(),m_values);effective["IsAutoMemory"]=m_values.value("IsAutoMemory");effective["CustomMemoryGb"]=m_values.value("CustomMemoryGb");auto automatic=effective;automatic["IsAutoMemory"]=true;m_memory=InstanceSettings::memoryPlan(instance,effective);m_memory["automatic"]=InstanceSettings::memoryPlan(instance,automatic).value("allocated");emit memoryChanged();}
 void GlobalSettings::clearError(){m_error.clear();emit changed();}
 void GlobalSettings::clearUpdateError(){m_updates["error"]="";emit changed();}
-void GlobalSettings::acceptAuthorization(const QVariantMap& state){
-    if(m_authorization.value("busy").toBool())return;
-    const auto revision=m_authorization.value("revision").toString();
-    if(!revision.isEmpty()&&state.value("revision").toString()!=revision)return;
-    m_authorization=state;emit changed();emit authorizationResolved("settingsVerify");
-}
 void GlobalSettings::captureKey(bool active){
     m_captureKey=active;
     if(active)QCoreApplication::instance()->installEventFilter(this);
@@ -141,8 +135,8 @@ QString GlobalSettings::keyLabel(const QString& key)const{
     if(labels.contains(key))return labels[key];auto label=key;label.replace("key.keyboard.keypad.","小键盘 ");label.remove("key.keyboard.");return label.replace('.', ' ').toUpper();
 }
 QVariantMap GlobalSettings::selectedJava()const{const auto path=QDir::cleanPath(m_values.value("SelectedJavaPath").toString());for(const auto& row:m_java)if(QDir::cleanPath(row.toMap().value("path").toString()).compare(path,Qt::CaseInsensitive)==0)return row.toMap();return {};}
-void GlobalSettings::attachJobs(InstanceJobs* reader,InstanceJobs* transfers,InstanceJobs* authorization){
-    m_reader=reader;m_transfers=transfers;m_authorizationJobs=authorization;
+void GlobalSettings::attachJobs(InstanceJobs* reader,InstanceJobs* transfers,InstanceJobs* updater){
+    m_reader=reader;m_transfers=transfers;m_updater=updater;
     auto completed=[this](const QString& action,const QVariantMap& result,const QVariantMap&,const QString&){
         if(action=="settingsJava"){
             m_java=result.value("runtimes").toList();m_javaBusy=false;
@@ -154,44 +148,35 @@ void GlobalSettings::attachJobs(InstanceJobs* reader,InstanceJobs* transfers,Ins
             auto next=m_values;next["AdditionalJavaPaths"]=paths;next["SelectedJavaPath"]=path;if(save(next))refreshJava();
         }else if(action=="settingsReadPreset"){
             if(applyPreset(result.value("values").toMap())){m_error=QString("已从实例读取 %1 项游戏设置，其余项目保留当前预设。").arg(result.value("count").toInt());}
-        }else if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsLogout"||action=="settingsPair")m_authorization=result;
-        else if(action=="settingsUpdateApply"){emit restartRequested();}
+        }else if(action=="settingsUpdateApply"){emit restartRequested();}
         else if(action.startsWith("settingsUpdate")){
             m_updates=result;
         }
         emit changed();
-        if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsLogout"||action=="settingsPair")emit authorizationResolved(action);
         if(action.startsWith("settingsUpdate"))emit updatesResolved(action);
         if(action=="settingsJava")emit javaResolved(true);
     };
-    connect(reader,&InstanceJobs::completed,this,completed);connect(transfers,&InstanceJobs::completed,this,completed);connect(authorization,&InstanceJobs::completed,this,completed);
+    connect(reader,&InstanceJobs::completed,this,completed);connect(transfers,&InstanceJobs::completed,this,completed);connect(updater,&InstanceJobs::completed,this,completed);
     auto failed=[this](const QString& action,const QString& error,const QString&){
         if(!action.startsWith("settings"))return;
         if(action=="settingsJava"||action=="settingsProbeJava"){m_javaBusy=false;m_javaStatus=error;}
         else if(action.startsWith("settingsUpdate")){m_updates["busy"]=false;m_updates["downloading"]=false;m_updates["error"]=error;m_updates["status"]=action=="settingsUpdateDownload"?(error=="操作已取消"?"更新下载已取消，可继续下载":"更新下载失败，可重试"):"暂时无法完成更新操作";}
-        else if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsPair"||action=="settingsLogout"){
-            m_authorization["busy"]=false;m_authorization["message"]=error;
-            m_authorization["status"]=m_authorization.value("hasCredential").toBool()?"NetworkRequired":"Unpaired";m_authorization["authorized"]=false;
-        }else m_error=error;
+        else m_error=error;
         emit changed();
         if(action.startsWith("settingsUpdate"))emit updatesResolved(action);
         if(action=="settingsJava")emit javaResolved(false);
-        if(action=="settingsAuthorization"||action=="settingsVerify"||action=="settingsPair"||action=="settingsLogout")emit authorizationResolved(action);
     };
-    connect(reader,&InstanceJobs::failed,this,failed);connect(transfers,&InstanceJobs::failed,this,failed);connect(authorization,&InstanceJobs::failed,this,failed);
-    connect(authorization,&InstanceJobs::partial,this,[this](const QString&,const QVariantMap& state,const QVariantMap&,const QString&){m_authorization=state;m_authorization["busy"]=true;emit changed();});
-    auto updateAuthorization=[this](const QString&,const QVariantMap& result,const QVariantMap&,const QString&){
-        if(!result.contains("authorization"))return;
-        acceptAuthorization(result.value("authorization").toMap());
-    };
-    connect(reader,&InstanceJobs::partial,this,updateAuthorization);connect(transfers,&InstanceJobs::partial,this,updateAuthorization);
+    connect(reader,&InstanceJobs::failed,this,failed);connect(transfers,&InstanceJobs::failed,this,failed);connect(updater,&InstanceJobs::failed,this,failed);
     connect(transfers,&InstanceJobs::changed,this,[this]{for(const auto& value:m_transfers->tasks()){const auto task=value.toMap();if(task.value("applicationUpdate").toBool()&&task.value("state")=="进行中"){
         m_updates["busy"]=true;m_updates["downloading"]=true;m_updates["progress"]=task.value("progress").toDouble()*100;m_updates["detail"]=task.value("detail");m_updates["speed"]=task.value("speed");
         const auto steps=task.value("steps").toList();const bool verifying=steps.size()>1&&steps[0].toMap().value("progress").toDouble()>=1;
         m_updates["status"]=verifying?"正在校验更新":"正在下载更新";emit changed();return;
     }}});
     m_updates={{"status","尚未检查更新"},{"detail",""},{"channel","preview"},{"startupCheck",true}};
-    reader->settings("settingsUpdateState",{{"startupTicket",QCoreApplication::arguments().contains("--update-ticket")}});
+    connect(this,&GlobalSettings::updatesResolved,this,[this](const QString& action){
+        if(action=="settingsUpdateState"&&m_updates.value("startupCheck",true).toBool()&&!m_updates.value("ready").toBool())
+            updateAction("startup");
+    });
 }
 void GlobalSettings::refreshJava(){if(m_javaBusy||!m_reader)return;m_javaBusy=true;m_javaStatus="正在搜索并验证 Java…";m_reader->settings("settingsJava");emit changed();}
 void GlobalSettings::addJava(const QUrl& file){if(m_javaBusy||!m_reader)return;m_javaBusy=true;m_javaStatus="正在验证 Java…";m_reader->settings("settingsProbeJava",{{"path",file.toLocalFile()}});emit changed();}
@@ -216,32 +201,18 @@ bool GlobalSettings::removeJava(const QString& path) {
     refreshJava(); return true;
 }
 void GlobalSettings::readPreset(const QString& path){if(m_reader)m_reader->settings("settingsReadPreset",{},path);}
-void GlobalSettings::authorizationAction(const QString& action){
-    if(!m_authorizationJobs||m_authorization.value("busy").toBool()||m_updates.value("busy").toBool())return;
-    if(action=="load"&&m_authorization.contains("status"))return;
-    const auto name=action=="verify"?"settingsVerify":action=="logout"?"settingsLogout":"settingsAuthorization";
-    m_authorization["busy"]=true;m_authorization["message"]="";
-    m_authorizationJobs->settings(name);emit changed();
-}
-void GlobalSettings::pairDevice(const QString& token){
-    if(!m_authorizationJobs||m_authorizationJobs->busy()||m_authorization.value("busy").toBool()||m_updates.value("busy").toBool())return;
-    m_authorization["busy"]=true;m_authorization["message"]="";
-    m_authorizationJobs->settings("settingsPair",{{"token",token}});emit changed();
-}
-void GlobalSettings::cancelAuthorization(){if(m_authorizationJobs&&m_authorization.value("busy").toBool())m_authorizationJobs->cancel();}
 void GlobalSettings::configureUpdates(const QString& channel,bool startup){
-    if(m_reader&&!m_updates.value("busy").toBool()){
+    if(m_updater&&!m_updates.value("busy").toBool()){
         m_updates["busy"]=true;m_updates["error"]="";emit changed();
-        m_reader->settings("settingsUpdateConfig",{{"channel",channel},{"startupCheck",startup}});
+        m_updater->settings("settingsUpdateConfig",{{"channel",channel},{"startupCheck",startup}});
     }
 }
 void GlobalSettings::updateAction(const QString& action){
-    if(!m_reader||!m_transfers)return;
+    if(!m_updater||!m_transfers)return;
     if(action=="cancel"){for(const auto& task:m_transfers->tasks()){const auto row=task.toMap();if(row.value("applicationUpdate").toBool()&&QStringList{"等待中","进行中"}.contains(row.value("state").toString()))m_transfers->taskAction(row.value("id").toInt());}return;}
-    if(m_authorizationJobs&&m_authorizationJobs->busy())return;
     if(m_updates.value("busy").toBool())return;
     if(action=="apply"&&m_transfers->mutating()){m_updates["error"]="传输任务仍在运行，请完成后再重启更新。";emit changed();return;}
     m_updates["error"]="";m_updates["busy"]=true;
     if(action=="download"){const auto release=m_updates.value("latest").toMap();if(release.isEmpty()){m_updates["busy"]=false;return;}m_updates["downloading"]=true;m_transfers->settings("settingsUpdateDownload",{{"release",release},{"title","更新 97Launch · "+release.value("version").toString()}});emit transferRequested();}
-    else {m_updates["status"]=action=="apply"?"正在准备重启更新":"正在检查更新";m_reader->settings(action=="apply"?"settingsUpdateApply":"settingsUpdateCheck",{{"silent",action=="startup"}});}emit changed();
+    else {m_updates["status"]=action=="apply"?"正在准备重启更新":"正在检查更新";m_updater->settings(action=="apply"?"settingsUpdateApply":"settingsUpdateCheck",{{"silent",action=="startup"}});}emit changed();
 }

@@ -22,7 +22,7 @@
 
 namespace {
 bool isMutation(const QString& action) {
-    return QSet<QString>{"dropImport", "import", "delete", "toggle", "update", "repair", "restoreMods", "setPack", "exportFile", "modify", "recoverModification", "exportPack", "installResource", "downloadInstall", "downloadResource", "downloadLocalPack", "downloadServerInstall", "settingsUpdateDownload"}.contains(action);
+    return QSet<QString>{"dropImport", "import", "delete", "toggle", "update", "repair", "restoreMods", "setPack", "exportFile", "modify", "recoverModification", "exportPack", "installResource", "downloadInstall", "downloadResource", "downloadLocalPack", "settingsUpdateDownload"}.contains(action);
 }
 QString caption(const QString& action) {
     return QMap<QString, QString>{{"import", "导入资源"}, {"delete", "移到回收站"}, {"toggle", "切换 Mod 状态"}, {"update", "更新 Mod"}, {"repair", "补齐必要前置"}, {"restoreMods", "回退 Mod 变更"},
@@ -53,8 +53,6 @@ InstanceJobs::InstanceJobs(Instances* instances, InstanceSettings* settings, QOb
         const QJsonObject request{{"action", m_current.action}, {"args", QJsonObject::fromVariantMap(m_current.args)},
             {"instance", QJsonObject::fromVariantMap(m_current.instance)}, {"global", QJsonObject::fromVariantMap(m_current.global)}};
         m_process.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n');
-        // Pairing tokens travel through stdin only and never remain in task history.
-        if(m_current.action=="settingsPair")m_current.args.remove("token");
     });
     connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this](int code, QProcess::ExitStatus) { finish(code); });
     connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
@@ -135,7 +133,7 @@ bool InstanceJobs::submit(const QString& action, const QVariantMap& args) {
     startNext(); emit changed(); return true;
 }
 bool InstanceJobs::settings(const QString& action,const QVariantMap& args,const QString& instancePath) {
-    const QSet<QString> actions{"settingsLaunchStatus","settingsInstallWebView","settingsJava","settingsProbeJava","settingsReadPreset","settingsAuthorization","settingsVerify","settingsLogout","settingsPair","settingsUpdateState","settingsUpdateConfig","settingsUpdateCheck","settingsUpdateDownload","settingsUpdateApply","settingsAcknowledge"};
+    const QSet<QString> actions{"settingsLaunchStatus","settingsInstallWebView","settingsJava","settingsProbeJava","settingsReadPreset","settingsUpdateState","settingsUpdateConfig","settingsUpdateCheck","settingsUpdateDownload","settingsUpdateApply","settingsAcknowledge"};
     if(!actions.contains(action))return fail("未知设置操作。");
     const auto instance=instancePath.isEmpty()?QVariantMap{}:m_instances->details(instancePath);
     if(!instancePath.isEmpty()&&instance.isEmpty())return fail("实例已不存在，请刷新列表。");
@@ -145,7 +143,7 @@ bool InstanceJobs::settings(const QString& action,const QVariantMap& args,const 
     if(isMutation(action))enqueueTask(job);startNext();emit changed();return true;
 }
 bool InstanceJobs::download(const QString& action, const QVariantMap& args, const QString& instancePath) {
-    const QSet<QString> actions{"downloadManifest", "downloadComponents", "downloadTarget", "downloadSearch", "downloadDetails", "downloadGroups", "downloadDependencies", "downloadWorlds", "downloadInstalled", "downloadStates", "downloadInstall", "downloadResource", "downloadLocalPack", "downloadServerList", "downloadServerPack", "downloadServerInstall"};
+    const QSet<QString> actions{"downloadManifest", "downloadComponents", "downloadTarget", "downloadSearch", "downloadDetails", "downloadGroups", "downloadDependencies", "downloadWorlds", "downloadInstalled", "downloadStates", "downloadInstall", "downloadResource", "downloadLocalPack"};
     if (!actions.contains(action)) return fail("未知下载任务。");
     auto instance = instancePath.isEmpty() ? QVariantMap{} : m_instances->details(instancePath);
     if (!instancePath.isEmpty() && instance.isEmpty()) return fail("安装目标已不存在，请刷新实例列表。");
@@ -158,7 +156,7 @@ bool InstanceJobs::download(const QString& action, const QVariantMap& args, cons
     if (isMutation(action)) {
         const auto name = parameters.value("request").toMap().value("name", parameters.value("name")).toString();
         if (!name.isEmpty()) for (const auto& job : m_retries)
-            if ((job.action == "downloadInstall" || job.action == "downloadLocalPack" || job.action == "downloadServerInstall" || job.args.value("project").toMap().value("projectType") == "modpack")
+            if ((job.action == "downloadInstall" || job.action == "downloadLocalPack" || job.args.value("project").toMap().value("projectType") == "modpack")
                 && job.args.value("root") == root && job.args.value("request").toMap().value("name", job.args.value("name")).toString() == name)
                 for (const auto& row : m_tasks) if (row.toMap().value("id").toInt() == job.id && QStringList{"等待中", "进行中"}.contains(row.toMap().value("state").toString())) return fail("同名实例正在安装，请修改实例名称。");
     } else {
@@ -180,7 +178,7 @@ void InstanceJobs::enqueueTask(const Job& job) {
         const auto request = job.args.value("request").toMap();
         if (!request.value("loader").toString().isEmpty() || !request.value("liteLoaderVersion").toString().isEmpty() || !request.value("optiFineVersion").toString().isEmpty() || !request.value("fabricApiVersion").toString().isEmpty() || !request.value("optiFabricVersion").toString().isEmpty()) add("安装所选加载器和组件", 6);
         add("整理实例文件", 0.01);
-    } else if (job.action == "downloadServerInstall") { add("下载客户端整合包", 1); add("读取整合包清单", 1); add("安装游戏与资源", 5); add("整理实例文件", 1); }
+    }
     else if (job.action == "downloadLocalPack") { add("读取整合包清单", 1); add("安装游戏与资源", 5); add("整理实例文件", 1); }
     else if (job.args.value("project").toMap().value("projectType") == "modpack" && !job.args.contains("destination")) {
         add("下载整合包", 1); add("下载整合包组件", 5); add("安装游戏与加载器", 5); add("整理实例文件", 1);
@@ -191,7 +189,7 @@ void InstanceJobs::enqueueTask(const Job& job) {
     m_tasks.append(QVariantMap{{"id", job.id}, {"title", title}, {"target", job.args.value("name", job.instance.value("name"))}, {"state", "等待中"}, {"detail", "等待前序任务完成"}, {"progress", 0.0}, {"speed", 0.0}, {"steps", steps}, {"applicationUpdate",job.action=="settingsUpdateDownload"}});
     m_retries.insert(job.id, job);
     const auto project = job.args.value("project").toMap();
-    const bool importPack = job.action == "downloadLocalPack" || job.action == "downloadServerInstall"
+    const bool importPack = job.action == "downloadLocalPack"
         || (job.action == "downloadResource" && project.value("projectType") == "modpack" && !job.args.contains("destination"));
     const bool showTransfer = job.action == "downloadInstall" || importPack || job.action == "modify";
     if (showTransfer || job.action == "downloadResource" || job.action == "installResource"
@@ -236,10 +234,10 @@ void InstanceJobs::finish(int exitCode) {
     if (success) { m_progress = 1; m_detail = "已完成"; updateTask("已完成"); }
     else { if (m_error.isEmpty()) m_error = "实例任务意外退出：" + QString::fromUtf8(m_stderr).left(500); m_detail = m_error; updateTask(m_canceled ? "已取消" : "失败"); }
     if (success) {
-        if (job.action == "downloadInstall" || job.action == "downloadLocalPack" || job.action == "downloadServerInstall" || (job.action == "downloadResource" && job.args.value("project").toMap().value("projectType") == "modpack" && !job.args.contains("destination"))) {
+        if (job.action == "downloadInstall" || job.action == "downloadLocalPack" || (job.action == "downloadResource" && job.args.value("project").toMap().value("projectType") == "modpack" && !job.args.contains("destination"))) {
             m_instances->refresh();
             const auto path = result.value("path").toString();
-            if ((job.action == "downloadServerInstall" || job.global.value("SelectNewInstance", true).toBool()) && !path.isEmpty()) {
+            if ((job.global.value("SelectNewInstance", true).toBool()) && !path.isEmpty()) {
                 const auto root = job.args.value("root").toString();
                 m_instances->selectFolder(root);
                 auto connection = std::make_shared<QMetaObject::Connection>();

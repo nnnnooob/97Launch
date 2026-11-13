@@ -8,12 +8,6 @@ internal static class SettingsActions {
     private static readonly JsonSerializerOptions Json=new(JsonSerializerDefaults.Web);
     private static string Text(JsonNode? node,string key,string fallback="")=>node?[key]?.GetValue<string>()??fallback;
     private sealed class ProgressSink:IProgress<InstallProgress>{public void Report(InstallProgress p)=>Program.Send(new{type="progress",detail=p.Detail,stage=p.Stage,fraction=p.Progress,preserve=p.PreserveOtherStages,speed=p.BytesPerSecond});}
-    internal static object AuthorizationState(LauncherAuthorizationService authorization) {
-        var device=authorization.Device;
-        return new{status=authorization.Status.ToString(),authorized=authorization.IsAuthorized,busy=authorization.IsBusy,hasCredential=authorization.HasCredential,deviceId=device?.Id??"",revision=authorization.CredentialRevision,
-            owner=device is null?"此设备尚未配对":$"{device.Nickname}  ·  QQ {device.QqId}",
-            details=device is null?"":$"设备：{device.Name}\n来源群：{device.GroupId}\n配对时间：{DateTimeOffset.FromUnixTimeSeconds(device.CreatedAt).LocalDateTime:yyyy-MM-dd HH:mm}\n最近验证：{authorization.LastVerifiedAt?.LocalDateTime:yyyy-MM-dd HH:mm}",message=authorization.Message};
-    }
     public static async Task<object> RunAsync(JsonNode request,CancellationToken token){
         var action=Text(request,"action");var args=request["args"]??new JsonObject();
         if(action=="settingsInstallWebView")return await WebViewRuntimeInstaller.EnsureAsync(token);
@@ -42,31 +36,12 @@ internal static class SettingsActions {
             return new{values=JsonSerializer.SerializeToNode(result.Settings),count=result.Count};
         }
         if(action is "settingsUpdateState" or "settingsUpdateConfig"){
-            // Reading preferences does not contact the authorization/update server.
-            var updates=new WorkerUpdateService(null!,store);await updates.LoadAsync(token,action=="settingsUpdateState",args["startupTicket"]?.GetValue<bool>()??false);
+            // Reading preferences does not contact the update server.
+            var updates=new WorkerUpdateService(store);await updates.LoadAsync(token,action=="settingsUpdateState",args["startupTicket"]?.GetValue<bool>()??false);
             if(action=="settingsUpdateConfig")updates.Configure(Text(args,"channel","preview"),args["startupCheck"]?.GetValue<bool>()??true);
             return updates.Snapshot();
         }
-        Directory.CreateDirectory(AppInfo.DataDirectory);
-        var authorization=new LauncherAuthorizationService();using var cancel=token.Register(authorization.CancelPending);
-        var authorizationAction=action is "settingsAuthorization" or "settingsVerify" or "settingsLogout" or "settingsPair";
-        if(authorizationAction)authorization.Changed+=(_,_)=>Program.Send(new{type="partial",data=AuthorizationState(authorization)});
-        else authorization.Changed+=(_,_)=>{
-            if(!token.IsCancellationRequested&&!authorization.IsBusy)Program.Send(new{type="partial",data=new{authorization=AuthorizationState(authorization)}});
-        };
-        token.ThrowIfCancellationRequested();
-        await authorization.InitializeAsync(action.StartsWith("settingsUpdate",StringComparison.Ordinal));
-        token.ThrowIfCancellationRequested();
-        if(authorizationAction){
-            if(action=="settingsVerify")await authorization.CheckAsync();
-            if(action=="settingsLogout")await authorization.LogoutAsync();
-            if(action=="settingsPair"){
-                var pairingToken=Text(args,"token");args.AsObject().Remove("token");
-                await authorization.PairAsync(pairingToken);
-            }
-            return AuthorizationState(authorization);
-        }
-        var updater=new WorkerUpdateService(authorization,store);await updater.LoadAsync(token);
+        var updater=new WorkerUpdateService(store);await updater.LoadAsync(token);
         if(action=="settingsUpdateCheck")await updater.CheckAsync(token,args["silent"]?.GetValue<bool>()??false);
         else if(action=="settingsUpdateDownload"){
             var release=args["release"]!.Deserialize<UpdateRelease>(Json)??throw new IOException("缺少更新清单。");await updater.DownloadAsync(release,new ProgressSink(),token);

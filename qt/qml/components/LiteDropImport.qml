@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic as Controls
 
 Item {
     id: dropHost
-    property bool authorized: false
+    property bool importEnabled: false
     property bool recognizing: false
     property bool hovering: false
     property string recognitionText: "正在检查文件"
@@ -36,8 +36,8 @@ Item {
             conflict.close();
         }
     }
-    onAuthorizedChanged: {
-        if (!authorized) {
+    onImportEnabledChanged: {
+        if (!importEnabled) {
             hide();
             if (dropJobs.busy) dropJobs.cancel();
             conflict.close();
@@ -46,7 +46,7 @@ Item {
 
     DropArea {
         anchors.fill: parent
-        enabled: dropHost.authorized && !dropJobs.busy
+        enabled: dropHost.importEnabled && !dropJobs.busy
         onEntered: function (drag) {
             if (!dropHost.hasFiles(drag)) { drag.accepted = false; return; }
             drag.accept(Qt.CopyAction);
@@ -64,7 +64,7 @@ Item {
         }
         onExited: leave.restart()
         onDropped: function (drop) {
-            if (!dropHost.authorized || dropJobs.busy || !dropHost.hasFiles(drop)) { drop.accepted = false; return; }
+            if (!dropHost.importEnabled || dropJobs.busy || !dropHost.hasFiles(drop)) { drop.accepted = false; return; }
             drop.accept(Qt.CopyAction);
             leave.stop();
             dropHost.hovering = false;
@@ -193,11 +193,11 @@ Item {
         }
         function onFailed(action, error, path) {
             dropHost.hide();
-            if (dropHost.authorized) dropHost.finished("无法导入文件\n" + error, true);
+            if (dropHost.importEnabled) dropHost.finished("无法导入文件\n" + error, true);
         }
         function onCompleted(action, result, args, path) {
             dropHost.hide();
-            if (!dropHost.authorized) return;
+            if (!dropHost.importEnabled) return;
             const errors = (result.errors || []).slice();
             let packCount = 0;
             for (const pack of result.packs || []) {
